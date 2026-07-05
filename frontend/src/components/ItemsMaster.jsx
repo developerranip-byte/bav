@@ -1,22 +1,41 @@
 import { useState } from 'react';
 
-function ItemsMaster({ categories, languages, items, onAddItem }) {
+function ItemsMaster({ categories, languages, items, onAddItem, onUpdateItem, onDeleteItem }) {
   const [itemForm, setItemForm] = useState({
     name: '',
     categoryId: categories[0]?.id || '',
     languageId: languages[0]?.id || '',
+    isbn: '',
     openingQty: 0,
     isActive: true,
   });
+  const [editingId, setEditingId] = useState(null);
+  const [errors, setErrors] = useState({});
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!itemForm.name.trim()) return;
-    await onAddItem(itemForm);
+    const nextErrors = {};
+    if (!itemForm.name || !itemForm.name.trim()) nextErrors.name = 'Item name is required';
+    if (!itemForm.categoryId) nextErrors.categoryId = 'Select a category';
+    if (!itemForm.languageId) nextErrors.languageId = 'Select a language';
+    if (itemForm.openingQty < 0) nextErrors.openingQty = 'Opening qty cannot be negative';
+    if (itemForm.isbn && !itemForm.isbn.trim()) nextErrors.isbn = 'ISBN cannot be blank';
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors);
+      return;
+    }
+    setErrors({});
+    if (editingId) {
+      await onUpdateItem(editingId, itemForm);
+      setEditingId(null);
+    } else {
+      await onAddItem(itemForm);
+    }
     setItemForm({
       name: '',
       categoryId: categories[0]?.id || '',
       languageId: languages[0]?.id || '',
+      isbn: '',
       openingQty: 0,
       isActive: true,
     });
@@ -45,30 +64,41 @@ function ItemsMaster({ categories, languages, items, onAddItem }) {
               value={itemForm.name}
               onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
             />
+            {errors.name && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.name}</div>}
+
+            <label className="field-label">ISBN</label>
+            <input
+              placeholder="Enter ISBN"
+              value={itemForm.isbn}
+              onChange={(e) => setItemForm({ ...itemForm, isbn: e.target.value })}
+            />
+            {errors.isbn && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.isbn}</div>}
 
             <label className="field-label">Item Category</label>
             <select
               value={itemForm.categoryId}
               onChange={(e) => setItemForm({ ...itemForm, categoryId: Number(e.target.value) })}
             >
-              {categories.map((category) => (
+              {categories.filter((category) => category.isActive || category.id === itemForm.categoryId).map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
               ))}
             </select>
+            {errors.categoryId && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.categoryId}</div>}
 
             <label className="field-label">Item Language</label>
             <select
               value={itemForm.languageId}
               onChange={(e) => setItemForm({ ...itemForm, languageId: Number(e.target.value) })}
             >
-              {languages.map((language) => (
+              {languages.filter((language) => language.isActive || language.id === itemForm.languageId).map((language) => (
                 <option key={language.id} value={language.id}>
                   {language.name}
                 </option>
               ))}
             </select>
+            {errors.languageId && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.languageId}</div>}
 
             <label className="field-label">Opening Quantity</label>
             <input
@@ -78,6 +108,7 @@ function ItemsMaster({ categories, languages, items, onAddItem }) {
               value={itemForm.openingQty}
               onChange={(e) => setItemForm({ ...itemForm, openingQty: Number(e.target.value) })}
             />
+            {errors.openingQty && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.openingQty}</div>}
 
             <label className="field-label">Is Active</label>
             <select
@@ -105,7 +136,22 @@ function ItemsMaster({ categories, languages, items, onAddItem }) {
                 </div>
                 <p>Category: {findCategoryName(item.categoryId)}</p>
                 <p>Language: {findLanguageName(item.languageId)}</p>
+                <p>ISBN: {item.isbn || '-'}</p>
                 <p>Opening Qty: {item.openingQty}</p>
+                <div style={{ marginTop: 8 }}>
+                  <button onClick={() => {
+                    setEditingId(item.id);
+                    setItemForm({
+                      name: item.name,
+                      categoryId: item.categoryId || categories[0]?.id || '',
+                      languageId: item.languageId || languages[0]?.id || '',
+                      isbn: item.isbn || '',
+                      openingQty: item.openingQty || 0,
+                      isActive: !!item.isActive,
+                    });
+                  }}>Edit</button>
+                  <button onClick={() => onDeleteItem(item.id)} style={{ marginLeft: 8 }}>Delete</button>
+                </div>
               </li>
             ))}
           </ul>
