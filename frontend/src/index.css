@@ -107,7 +107,9 @@ textarea { min-height: 80px; resize: vertical; }
   .menu-btn { width: 100%; }
   .list-row { flex-direction: column; align-items: flex-start; }
   .field-label { display: block; margin-bottom: 4px; }
-  input, select, textarea, button { width: 100%; }
+  input, select, textarea { width: 100%; }
+  button:not(.logout-btn) { width: 100%; }
+  .logout-btn { width: auto; position: fixed; top: 12px; right: 12px; z-index: 1001; }
   .content-grid .card, .dashboard-grid .stats-card { margin: 0; }
   .data-table th, .data-table td { display: block; width: 100%; }
   .data-table tr { display: block; margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }

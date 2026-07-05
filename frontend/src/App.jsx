@@ -396,8 +396,8 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 24px', background: '#fff', borderBottom: '1px solid #eee' }}>
-        <button style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={handleLogout}>Logout</button>
+      <header className="logout-header">
+        <button className="logout-btn" onClick={handleLogout}>Logout</button>
       </header>
       {toast && (
         <div
