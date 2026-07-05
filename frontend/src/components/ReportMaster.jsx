@@ -1,11 +1,13 @@
 import { useState } from 'react';
 
-function ReportMaster({ reports }) {
+function ReportMaster({ reports, authHeaders }) {
   const [history, setHistory] = useState({ type: null, itemId: null, rows: [], page: 1, totalPages: 1 });
 
   const handleHistory = async (itemId, type, page = 1) => {
     const endpoint = type === 'purchase' ? 'purchases' : 'sales';
-    const res = await fetch(`http://localhost:5000/api/reports/${itemId}/${endpoint}?page=${page}`);
+    const res = await fetch(`http://localhost:5000/api/reports/${itemId}/${endpoint}?page=${page}`, {
+      headers: authHeaders ? authHeaders() : undefined,
+    });
     if (res.ok) {
       const data = await res.json();
       setHistory({
@@ -77,8 +79,6 @@ function ReportMaster({ reports }) {
                       <strong>{history.type === 'purchase' ? `Purchased Qty ${row.quantity}` : `Sold Qty ${row.quantity}`}</strong>
                       <span>{new Date(history.type === 'purchase' ? row.purchaseDate : row.salesDate).toLocaleDateString()}</span>
                     </div>
-                    <p>Amount: {row.amount}</p>
-                    {history.type === 'sales' && <p>{row.customerName} - {row.customerPhone}</p>}
                   </li>
                 ))}
               </ul>

@@ -4,10 +4,7 @@ function SalesMaster({ items, sales, onAddSale }) {
   const [saleForm, setSaleForm] = useState({
     itemId: items[0]?.id || '',
     quantity: 1,
-    amount: 0,
     salesDate: new Date().toISOString().slice(0, 10),
-    customerName: '',
-    customerPhone: '',
   });
   const [errors, setErrors] = useState({});
 
@@ -18,9 +15,6 @@ function SalesMaster({ items, sales, onAddSale }) {
     const nextErrors = {};
     if (!saleForm.itemId) nextErrors.itemId = 'Select an item';
     if (!saleForm.quantity || Number(saleForm.quantity) <= 0) nextErrors.quantity = 'Quantity must be at least 1';
-    if (!saleForm.amount || Number(saleForm.amount) <= 0) nextErrors.amount = 'Amount must be greater than 0';
-    if (!saleForm.customerName.trim()) nextErrors.customerName = 'Customer name is required';
-    if (!saleForm.customerPhone.trim()) nextErrors.customerPhone = 'Customer phone is required';
     if (!saleForm.salesDate) nextErrors.salesDate = 'Sales date is required';
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -30,18 +24,12 @@ function SalesMaster({ items, sales, onAddSale }) {
     await onAddSale({
       itemId: saleForm.itemId,
       quantity: Number(saleForm.quantity),
-      amount: Number(saleForm.amount),
       salesDate: saleForm.salesDate,
-      customerName: saleForm.customerName.trim(),
-      customerPhone: saleForm.customerPhone.trim(),
     });
     setSaleForm({
       itemId: items[0]?.id || '',
       quantity: 1,
-      amount: 0,
       salesDate: new Date().toISOString().slice(0, 10),
-      customerName: '',
-      customerPhone: '',
     });
   };
 
@@ -84,16 +72,6 @@ function SalesMaster({ items, sales, onAddSale }) {
             />
             {errors.quantity && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.quantity}</div>}
 
-            <label className="field-label">Sales Amount</label>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={saleForm.amount}
-              onChange={(e) => setSaleForm({ ...saleForm, amount: Number(e.target.value) })}
-            />
-            {errors.amount && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.amount}</div>}
-
             <label className="field-label">Sales Date</label>
             <input
               type="date"
@@ -101,20 +79,6 @@ function SalesMaster({ items, sales, onAddSale }) {
               onChange={(e) => setSaleForm({ ...saleForm, salesDate: e.target.value })}
             />
             {errors.salesDate && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.salesDate}</div>}
-
-            <label className="field-label">Customer Name</label>
-            <input
-              value={saleForm.customerName}
-              onChange={(e) => setSaleForm({ ...saleForm, customerName: e.target.value })}
-            />
-            {errors.customerName && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.customerName}</div>}
-
-            <label className="field-label">Customer Phone</label>
-            <input
-              value={saleForm.customerPhone}
-              onChange={(e) => setSaleForm({ ...saleForm, customerPhone: e.target.value })}
-            />
-            {errors.customerPhone && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.customerPhone}</div>}
 
             <button type="submit">Save Sale</button>
           </form>
@@ -130,8 +94,6 @@ function SalesMaster({ items, sales, onAddSale }) {
                   <span>{new Date(sale.salesDate).toLocaleDateString()}</span>
                 </div>
                 <p>Qty: {sale.quantity}</p>
-                <p>Amount: {sale.amount}</p>
-                <p>{sale.customerName} - {sale.customerPhone}</p>
               </li>
             ))}
           </ul>

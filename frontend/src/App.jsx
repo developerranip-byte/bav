@@ -464,7 +464,7 @@ function App() {
           <Route path="/items" element={<ItemsMaster categories={categories} languages={languages} onAddItem={handleAddItem} onUpdateItem={handleUpdateItem} onDeleteItem={handleDeleteItem} items={items} />} />
           <Route path="/purchase" element={<PurchaseMaster items={items} purchases={purchases} onAddPurchase={handleAddPurchase} />} />
           <Route path="/sales" element={<SalesMaster items={items} sales={sales} onAddSale={handleAddSale} />} />
-          <Route path="/report" element={<ReportMaster reports={reports} />} />
+          <Route path="/report" element={<ReportMaster reports={reports} authHeaders={authHeaders} />} />
           <Route path="/" element={activeMenu === 'dashboard' ? (
             <section className="dashboard-grid">
               <article className="stats-card blue">

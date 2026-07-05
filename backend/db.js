@@ -44,10 +44,7 @@ CREATE TABLE IF NOT EXISTS sales (
   id INT AUTO_INCREMENT PRIMARY KEY,
   itemId INT NOT NULL,
   quantity INT NOT NULL DEFAULT 1,
-  amount DECIMAL(12,2) NOT NULL,
   salesDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
-  customerName VARCHAR(255) NOT NULL,
-  customerPhone VARCHAR(50) NOT NULL,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE
 );
@@ -77,11 +74,24 @@ const initializeDatabase = async () => {
     }
   };
 
+  const dropColumnIfExists = async (table, column) => {
+    const [rows] = await connection.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+      [dbName, table, column]
+    );
+    if (rows.length) {
+      await connection.query(`ALTER TABLE \`${table}\` DROP COLUMN \`${column}\``);
+    }
+  };
+
   await ensureColumn('items', 'isbn', 'isbn VARCHAR(255)');
   await ensureColumn('languages', 'isActive', 'isActive TINYINT(1) NOT NULL DEFAULT 1');
   await ensureColumn('items', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
   await ensureColumn('purchases', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
   await ensureColumn('sales', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
+  await dropColumnIfExists('sales', 'amount');
+  await dropColumnIfExists('sales', 'customerName');
+  await dropColumnIfExists('sales', 'customerPhone');
   await connection.end();
 
   return mysql.createPool({

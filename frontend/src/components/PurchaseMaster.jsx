@@ -126,7 +126,7 @@ function PurchaseMaster({ items, purchases, onAddPurchase }) {
             />
             {errors.quantity && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.quantity}</div>}
 
-            <label className="field-label">Purchase Amount</label>
+            <label className="field-label">Price</label>
             <input
               type="number"
               min="0.01"
