@@ -1,22 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { API_BASE, createAuthHeaders } from '../utils/api';
 
-function ReportMaster({ reports, authHeaders }) {
+function ReportMaster({ setToast }) {
+  const [reports, setReports] = useState([]);
   const [history, setHistory] = useState({ type: null, itemId: null, rows: [], page: 1, totalPages: 1 });
+
+  const token = localStorage.getItem('bav_auth_token');
+  const headers = () => createAuthHeaders(token);
+
+  const fetchReports = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/reports`, { headers: headers() });
+      if (res.ok) {
+        setReports(await res.json());
+      }
+    } catch (err) {
+      console.error('Failed to fetch reports:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
 
   const handleHistory = async (itemId, type, page = 1) => {
     const endpoint = type === 'purchase' ? 'purchases' : 'sales';
-    const res = await fetch(`http://localhost:5000/api/reports/${itemId}/${endpoint}?page=${page}`, {
-      headers: authHeaders ? authHeaders() : undefined,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setHistory({
-        type,
-        itemId,
-        rows: data.rows,
-        page: data.page,
-        totalPages: data.totalPages,
+    try {
+      const res = await fetch(`${API_BASE}/reports/${itemId}/${endpoint}?page=${page}`, {
+        headers: headers(),
       });
+      if (res.ok) {
+        const data = await res.json();
+        setHistory({
+          type,
+          itemId,
+          rows: data.rows,
+          page: data.page,
+          totalPages: data.totalPages,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
     }
   };
 

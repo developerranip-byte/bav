@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { API_BASE, createAuthHeaders } from '../utils/api';
 
-function PurchaseMaster({ items, purchases, onAddPurchase, authHeaders }) {
+function PurchaseMaster({ setToast }) {
+  const [items, setItems] = useState([]);
+  const [purchases, setPurchases] = useState([]);
   const [purchaseForm, setPurchaseForm] = useState({
-    itemId: items[0]?.id || '',
+    itemId: '',
     quantity: 1,
     amount: 0,
     purchaseDate: new Date().toISOString().slice(0, 10),
@@ -11,7 +14,32 @@ function PurchaseMaster({ items, purchases, onAddPurchase, authHeaders }) {
   const [suggestions, setSuggestions] = useState([]);
   const [errors, setErrors] = useState({});
 
+  const token = localStorage.getItem('bav_auth_token');
+  const headers = () => createAuthHeaders(token);
+
   const activeItems = useMemo(() => items.filter((item) => item.isActive), [items]);
+
+  const fetchData = async () => {
+    try {
+      const [itemRes, purchaseRes] = await Promise.all([
+        fetch(`${API_BASE}/items`, { headers: headers() }),
+        fetch(`${API_BASE}/purchases`, { headers: headers() }),
+      ]);
+
+      if (itemRes.ok) {
+        const itemsData = await itemRes.json();
+        setItems(itemsData);
+        setPurchaseForm((prev) => ({ ...prev, itemId: itemsData[0]?.id || '' }));
+      }
+      if (purchaseRes.ok) setPurchases(await purchaseRes.json());
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const query = itemSearch.trim();
@@ -23,9 +51,9 @@ function PurchaseMaster({ items, purchases, onAddPurchase, authHeaders }) {
     const controller = new AbortController();
     const timeout = setTimeout(async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/items/search?q=${encodeURIComponent(query)}`, {
+        const res = await fetch(`${API_BASE}/items/search?q=${encodeURIComponent(query)}`, {
           signal: controller.signal,
-          headers: authHeaders ? authHeaders() : {},
+          headers: headers(),
         });
         if (res.ok) {
           const data = await res.json();
@@ -46,7 +74,7 @@ function PurchaseMaster({ items, purchases, onAddPurchase, authHeaders }) {
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [itemSearch, authHeaders]);
+  }, [itemSearch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,15 +88,32 @@ function PurchaseMaster({ items, purchases, onAddPurchase, authHeaders }) {
       return;
     }
     setErrors({});
-    await onAddPurchase(purchaseForm);
-    setPurchaseForm({
-      itemId: items[0]?.id || '',
-      quantity: 1,
-      amount: 0,
-      purchaseDate: new Date().toISOString().slice(0, 10),
-    });
-    setItemSearch('');
-    setSuggestions([]);
+
+    try {
+      const res = await fetch(`${API_BASE}/purchases`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify(purchaseForm),
+      });
+
+      if (res.ok) {
+        setToast({ type: 'success', message: 'Purchase recorded' });
+        setPurchaseForm({
+          itemId: items[0]?.id || '',
+          quantity: 1,
+          amount: 0,
+          purchaseDate: new Date().toISOString().slice(0, 10),
+        });
+        setItemSearch('');
+        setSuggestions([]);
+        fetchData();
+      } else {
+        const error = await res.json();
+        setToast({ type: 'error', message: error.message || res.statusText });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Network error' });
+    }
   };
 
   const findItemName = (itemId) => items.find((item) => item.id === Number(itemId))?.name || '-';

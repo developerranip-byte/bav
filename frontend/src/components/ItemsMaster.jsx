@@ -1,16 +1,50 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { API_BASE, createAuthHeaders } from '../utils/api';
 
-function ItemsMaster({ categories, languages, items, onAddItem, onUpdateItem, onDeleteItem }) {
+function ItemsMaster({ setToast }) {
+  const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [languages, setLanguages] = useState([]);
   const [itemForm, setItemForm] = useState({
     name: '',
-    categoryId: categories[0]?.id || '',
-    languageId: languages[0]?.id || '',
+    categoryId: '',
+    languageId: '',
     isbn: '',
-    openingQty: 0,
     isActive: true,
   });
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
+
+  const token = localStorage.getItem('bav_auth_token');
+  const headers = () => createAuthHeaders(token);
+
+  const fetchData = async () => {
+    try {
+      const [itemRes, catRes, langRes] = await Promise.all([
+        fetch(`${API_BASE}/items`, { headers: headers() }),
+        fetch(`${API_BASE}/categories`, { headers: headers() }),
+        fetch(`${API_BASE}/languages`, { headers: headers() }),
+      ]);
+
+      if (itemRes.ok) setItems(await itemRes.json());
+      if (catRes.ok) {
+        const cats = await catRes.json();
+        setCategories(cats);
+        setItemForm((prev) => ({ ...prev, categoryId: cats[0]?.id || '' }));
+      }
+      if (langRes.ok) {
+        const langs = await langRes.json();
+        setLanguages(langs);
+        setItemForm((prev) => ({ ...prev, languageId: langs[0]?.id || '' }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,20 +58,53 @@ function ItemsMaster({ categories, languages, items, onAddItem, onUpdateItem, on
       return;
     }
     setErrors({});
-    if (editingId) {
-      await onUpdateItem(editingId, itemForm);
-      setEditingId(null);
-    } else {
-      await onAddItem(itemForm);
+
+    try {
+      const method = editingId ? 'PUT' : 'POST';
+      const url = editingId ? `${API_BASE}/items/${editingId}` : `${API_BASE}/items`;
+      const res = await fetch(url, {
+        method,
+        headers: headers(),
+        body: JSON.stringify(itemForm),
+      });
+
+      if (res.ok) {
+        setToast({ type: 'success', message: editingId ? 'Item updated' : 'Item saved' });
+        setItemForm({
+          name: '',
+          categoryId: categories[0]?.id || '',
+          languageId: languages[0]?.id || '',
+          isbn: '',
+          isActive: true,
+        });
+        setEditingId(null);
+        fetchData();
+      } else {
+        const error = await res.json();
+        setToast({ type: 'error', message: error.message || res.statusText });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Network error' });
     }
-    setItemForm({
-      name: '',
-      categoryId: categories[0]?.id || '',
-      languageId: languages[0]?.id || '',
-      isbn: '',
-      openingQty: 0,
-      isActive: true,
-    });
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this item?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/items/${id}`, {
+        method: 'DELETE',
+        headers: headers(),
+      });
+      if (res.ok || res.status === 204) {
+        setToast({ type: 'success', message: 'Item deleted' });
+        fetchData();
+      } else {
+        const error = await res.json();
+        setToast({ type: 'error', message: error.message || res.statusText });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Network error' });
+    }
   };
 
   const findCategoryName = (categoryId) => categories.find((cat) => cat.id === Number(categoryId))?.name || '-';
@@ -134,11 +201,10 @@ function ItemsMaster({ categories, languages, items, onAddItem, onUpdateItem, on
                       categoryId: item.categoryId || categories[0]?.id || '',
                       languageId: item.languageId || languages[0]?.id || '',
                       isbn: item.isbn || '',
-                      openingQty: item.openingQty || 0,
                       isActive: !!item.isActive,
                     });
                   }}>Edit</button>
-                  <button onClick={() => onDeleteItem(item.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
+                  <button onClick={() => handleDelete(item.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
                 </div>
               </li>
             ))}

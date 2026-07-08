@@ -1,9 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { API_BASE, createAuthHeaders } from '../utils/api';
 
-function CategoryMaster({ categories, onAddCategory, onUpdateCategory, onDeleteCategory }) {
+function CategoryMaster({ authHeaders, setToast }) {
+  const [categories, setCategories] = useState([]);
   const [categoryForm, setCategoryForm] = useState({ name: '', description: '', isActive: true });
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
+
+  const token = localStorage.getItem('bav_auth_token');
+  const headers = () => createAuthHeaders(token);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/categories`, { headers: headers() });
+      if (res.ok) {
+        setCategories(await res.json());
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const handleCategorySubmit = async (e) => {
     e.preventDefault();
@@ -14,13 +34,47 @@ function CategoryMaster({ categories, onAddCategory, onUpdateCategory, onDeleteC
       return;
     }
     setErrors({});
-    if (editingId) {
-      await onUpdateCategory(editingId, categoryForm);
-      setEditingId(null);
-    } else {
-      await onAddCategory(categoryForm);
+
+    try {
+      const method = editingId ? 'PUT' : 'POST';
+      const url = editingId ? `${API_BASE}/categories/${editingId}` : `${API_BASE}/categories`;
+      const res = await fetch(url, {
+        method,
+        headers: headers(),
+        body: JSON.stringify(categoryForm),
+      });
+
+      if (res.ok) {
+        setToast({ type: 'success', message: editingId ? 'Category updated' : 'Category saved' });
+        setCategoryForm({ name: '', description: '', isActive: true });
+        setEditingId(null);
+        fetchCategories();
+      } else {
+        const error = await res.json();
+        setToast({ type: 'error', message: error.message || res.statusText });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Network error' });
     }
-    setCategoryForm({ name: '', description: '', isActive: true });
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this category?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/categories/${id}`, {
+        method: 'DELETE',
+        headers: headers(),
+      });
+      if (res.ok || res.status === 204) {
+        setToast({ type: 'success', message: 'Category deleted' });
+        fetchCategories();
+      } else {
+        const error = await res.json();
+        setToast({ type: 'error', message: error.message || res.statusText });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Network error' });
+    }
   };
 
   return (
@@ -79,7 +133,7 @@ function CategoryMaster({ categories, onAddCategory, onUpdateCategory, onDeleteC
                     setEditingId(category.id);
                     setCategoryForm({ name: category.name, description: category.description || '', isActive: !!category.isActive });
                   }}>Edit</button>
-                  <button onClick={() => onDeleteCategory(category.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
+                  <button onClick={() => handleDelete(category.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
                 </div>
               </li>
             ))}

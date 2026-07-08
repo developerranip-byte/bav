@@ -1,11 +1,31 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { API_BASE, createAuthHeaders } from '../utils/api';
 
-function LanguageMaster({ languages, onAddLanguage, onUpdateLanguage, onDeleteLanguage }) {
+function LanguageMaster({ setToast }) {
+  const [languages, setLanguages] = useState([]);
   const [languageForm, setLanguageForm] = useState({ name: '', code: '', isActive: true });
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
 
-  const handleSubmit = (e) => {
+  const token = localStorage.getItem('bav_auth_token');
+  const headers = () => createAuthHeaders(token);
+
+  const fetchLanguages = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/languages`, { headers: headers() });
+      if (res.ok) {
+        setLanguages(await res.json());
+      }
+    } catch (err) {
+      console.error('Failed to fetch languages:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLanguages();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const nextErrors = {};
     if (!languageForm.name || !languageForm.name.trim()) nextErrors.name = 'Name is required';
@@ -15,13 +35,47 @@ function LanguageMaster({ languages, onAddLanguage, onUpdateLanguage, onDeleteLa
       return;
     }
     setErrors({});
-    if (editingId) {
-      onUpdateLanguage(editingId, { ...languageForm });
-      setEditingId(null);
-    } else {
-      onAddLanguage({ ...languageForm });
+
+    try {
+      const method = editingId ? 'PUT' : 'POST';
+      const url = editingId ? `${API_BASE}/languages/${editingId}` : `${API_BASE}/languages`;
+      const res = await fetch(url, {
+        method,
+        headers: headers(),
+        body: JSON.stringify(languageForm),
+      });
+
+      if (res.ok) {
+        setToast({ type: 'success', message: editingId ? 'Language updated' : 'Language saved' });
+        setLanguageForm({ name: '', code: '', isActive: true });
+        setEditingId(null);
+        fetchLanguages();
+      } else {
+        const error = await res.json();
+        setToast({ type: 'error', message: error.message || res.statusText });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Network error' });
     }
-    setLanguageForm({ name: '', code: '', isActive: true });
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this language?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/languages/${id}`, {
+        method: 'DELETE',
+        headers: headers(),
+      });
+      if (res.ok || res.status === 204) {
+        setToast({ type: 'success', message: 'Language deleted' });
+        fetchLanguages();
+      } else {
+        const error = await res.json();
+        setToast({ type: 'error', message: error.message || res.statusText });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Network error' });
+    }
   };
 
   return (
@@ -81,7 +135,7 @@ function LanguageMaster({ languages, onAddLanguage, onUpdateLanguage, onDeleteLa
                     setEditingId(language.id);
                     setLanguageForm({ name: language.name, code: language.code, isActive: !!language.isActive });
                   }}>Edit</button>
-                  <button onClick={() => onDeleteLanguage(language.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
+                  <button onClick={() => handleDelete(language.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
                 </div>
               </li>
             ))}

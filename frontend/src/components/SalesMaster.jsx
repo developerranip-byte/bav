@@ -1,14 +1,43 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { API_BASE, createAuthHeaders } from '../utils/api';
 
-function SalesMaster({ items, sales, onAddSale }) {
+function SalesMaster({ setToast }) {
+  const [items, setItems] = useState([]);
+  const [sales, setSales] = useState([]);
   const [saleForm, setSaleForm] = useState({
-    itemId: items[0]?.id || '',
+    itemId: '',
     quantity: 1,
     salesDate: new Date().toISOString().slice(0, 10),
+    salesPrice: 0,
   });
   const [errors, setErrors] = useState({});
 
+  const token = localStorage.getItem('bav_auth_token');
+  const headers = () => createAuthHeaders(token);
+
   const itemOptions = useMemo(() => items, [items]);
+
+  const fetchData = async () => {
+    try {
+      const [itemRes, salesRes] = await Promise.all([
+        fetch(`${API_BASE}/items`, { headers: headers() }),
+        fetch(`${API_BASE}/sales`, { headers: headers() }),
+      ]);
+
+      if (itemRes.ok) {
+        const itemsData = await itemRes.json();
+        setItems(itemsData);
+        setSaleForm((prev) => ({ ...prev, itemId: itemsData[0]?.id || '' }));
+      }
+      if (salesRes.ok) setSales(await salesRes.json());
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,24 +45,42 @@ function SalesMaster({ items, sales, onAddSale }) {
     if (!saleForm.itemId) nextErrors.itemId = 'Select an item';
     if (!saleForm.quantity || Number(saleForm.quantity) <= 0) nextErrors.quantity = 'Quantity must be at least 1';
     if (!saleForm.salesDate) nextErrors.salesDate = 'Sales date is required';
+    if(!saleForm.salesPrice || Number(saleForm.salesPrice) < 0) nextErrors.salesPrice = 'Sales price must be a non-negative number';
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
       return;
     }
     setErrors({});
-    const result = await onAddSale({
-      itemId: saleForm.itemId,
-      quantity: Number(saleForm.quantity),
-      salesDate: saleForm.salesDate,
-    });
-    if (result && result.success) {
-      setSaleForm({
-        itemId: items[0]?.id || '',
-        quantity: 1,
-        salesDate: new Date().toISOString().slice(0, 10),
+
+    try {
+      const res = await fetch(`${API_BASE}/sales`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+          itemId: saleForm.itemId,
+          quantity: Number(saleForm.quantity),
+          salesDate: saleForm.salesDate,
+          salesPrice: Number(saleForm.salesPrice),
+          
+        }),
       });
-    } else if (result && result.error) {
-      setErrors({ quantity: result.error });
+
+      if (res.ok) {
+        setToast({ type: 'success', message: 'Sale recorded' });
+        setSaleForm({
+          itemId: items[0]?.id || '',
+          quantity: 1,
+          salesDate: new Date().toISOString().slice(0, 10),
+        });
+        fetchData();
+      } else {
+        const data = await res.json();
+        const errorMessage = data.message || res.statusText;
+        setToast({ type: 'error', message: errorMessage });
+        setErrors({ quantity: errorMessage });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Network error' });
     }
   };
 
@@ -83,6 +130,16 @@ function SalesMaster({ items, sales, onAddSale }) {
               onChange={(e) => setSaleForm({ ...saleForm, salesDate: e.target.value })}
             />
             {errors.salesDate && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.salesDate}</div>}
+            
+            <label className="field-label">Sales Price</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={saleForm.salesPrice}
+              onChange={(e) => setSaleForm({ ...saleForm, salesPrice: Number(e.target.value) })}
+            />
+            {errors.salesPrice && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.salesPrice}</div>}
 
             <button type="submit">Save Sale</button>
           </form>
@@ -98,6 +155,7 @@ function SalesMaster({ items, sales, onAddSale }) {
                   <span>{new Date(sale.salesDate).toLocaleDateString()}</span>
                 </div>
                 <p>Qty: {sale.quantity}</p>
+                <p>Price: ${sale.salesPrice?.toFixed(2)}</p>
               </li>
             ))}
           </ul>

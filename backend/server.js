@@ -25,6 +25,7 @@ app.use('/api/auth', authRoutes);
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  console.log(token)
   if (!token || !verifyToken(token)) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
