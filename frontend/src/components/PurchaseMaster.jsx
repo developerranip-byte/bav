@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-function PurchaseMaster({ items, purchases, onAddPurchase }) {
+function PurchaseMaster({ items, purchases, onAddPurchase, authHeaders }) {
   const [purchaseForm, setPurchaseForm] = useState({
     itemId: items[0]?.id || '',
     quantity: 1,
@@ -21,22 +21,32 @@ function PurchaseMaster({ items, purchases, onAddPurchase }) {
     }
 
     const controller = new AbortController();
-    const fetchSuggestions = async () => {
+    const timeout = setTimeout(async () => {
       try {
         const res = await fetch(`http://localhost:5000/api/items/search?q=${encodeURIComponent(query)}`, {
           signal: controller.signal,
+          headers: authHeaders ? authHeaders() : {},
         });
         if (res.ok) {
-          setSuggestions(await res.json());
+          const data = await res.json();
+          setSuggestions(Array.isArray(data) ? data : []);
+        } else {
+          console.error('Search failed:', res.status, res.statusText);
+          setSuggestions([]);
         }
       } catch (err) {
-        if (err.name !== 'AbortError') console.error(err);
+        if (err.name !== 'AbortError') {
+          console.error('Search error:', err);
+          setSuggestions([]);
+        }
       }
-    };
+    }, 300);
 
-    fetchSuggestions();
-    return () => controller.abort();
-  }, [itemSearch]);
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [itemSearch, authHeaders]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

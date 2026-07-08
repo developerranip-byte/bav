@@ -18,7 +18,6 @@ function ItemsMaster({ categories, languages, items, onAddItem, onUpdateItem, on
     if (!itemForm.name || !itemForm.name.trim()) nextErrors.name = 'Item name is required';
     if (!itemForm.categoryId) nextErrors.categoryId = 'Select a category';
     if (!itemForm.languageId) nextErrors.languageId = 'Select a language';
-    if (itemForm.openingQty < 0) nextErrors.openingQty = 'Opening qty cannot be negative';
     if (itemForm.isbn && !itemForm.isbn.trim()) nextErrors.isbn = 'ISBN cannot be blank';
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -100,16 +99,6 @@ function ItemsMaster({ categories, languages, items, onAddItem, onUpdateItem, on
             </select>
             {errors.languageId && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.languageId}</div>}
 
-            <label className="field-label">Opening Quantity</label>
-            <input
-              type="number"
-              min="0"
-              placeholder="Opening quantity"
-              value={itemForm.openingQty}
-              onChange={(e) => setItemForm({ ...itemForm, openingQty: Number(e.target.value) })}
-            />
-            {errors.openingQty && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.openingQty}</div>}
-
             <label className="field-label">Is Active</label>
             <select
               value={itemForm.isActive ? 'true' : 'false'}
@@ -137,7 +126,6 @@ function ItemsMaster({ categories, languages, items, onAddItem, onUpdateItem, on
                 <p>Category: {findCategoryName(item.categoryId)}</p>
                 <p>Language: {findLanguageName(item.languageId)}</p>
                 <p>ISBN: {item.isbn || '-'}</p>
-                <p>Opening Qty: {item.openingQty}</p>
                 <div style={{ marginTop: 8 }}>
                   <button onClick={() => {
                     setEditingId(item.id);
@@ -150,7 +138,7 @@ function ItemsMaster({ categories, languages, items, onAddItem, onUpdateItem, on
                       isActive: !!item.isActive,
                     });
                   }}>Edit</button>
-                  <button onClick={() => onDeleteItem(item.id)} style={{ marginLeft: 8 }}>Delete</button>
+                  <button onClick={() => onDeleteItem(item.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
                 </div>
               </li>
             ))}

@@ -81,7 +81,7 @@ function LanguageMaster({ languages, onAddLanguage, onUpdateLanguage, onDeleteLa
                     setEditingId(language.id);
                     setLanguageForm({ name: language.name, code: language.code, isActive: !!language.isActive });
                   }}>Edit</button>
-                  <button onClick={() => onDeleteLanguage(language.id)} style={{ marginLeft: 8 }}>Delete</button>
+                  <button onClick={() => onDeleteLanguage(language.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
                 </div>
               </li>
             ))}

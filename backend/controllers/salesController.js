@@ -21,6 +21,7 @@ export const createSale = async (req, res) => {
     return res.status(400).json({ message: 'Sales quantity must be greater than zero' });
   }
 
+  // Check if item exists and is active
   const [itemRows] = await pool.query('SELECT isActive FROM items WHERE id = ?', [itemId]);
   if (itemRows.length === 0) {
     return res.status(400).json({ message: 'Item not found' });
@@ -29,24 +30,26 @@ export const createSale = async (req, res) => {
     return res.status(400).json({ message: 'Sale can only be recorded for an active item' });
   }
 
-  const [stockRows] = await pool.query(
-    `SELECT i.openingQty,
-            COALESCE(SUM(p.quantity), 0) AS purchasedQty,
-            COALESCE(SUM(s.quantity), 0) AS soldQty
-       FROM items i
-       LEFT JOIN purchases p ON p.itemId = i.id
-       LEFT JOIN sales s ON s.itemId = i.id
-      WHERE i.id = ?
-      GROUP BY i.id`,
+  // Get opening quantity from items table
+  const [openingRows] = await pool.query('SELECT openingQty FROM items WHERE id = ?', [itemId]);
+  const openingQty = Number(openingRows[0]?.openingQty || 0);
+
+  // Get total purchased quantity from purchases table
+  const [purchaseRows] = await pool.query(
+    'SELECT COALESCE(SUM(quantity), 0) AS totalPurchased FROM purchases WHERE itemId = ?',
     [itemId]
   );
+  const purchasedQty = Number(purchaseRows[0]?.totalPurchased || 0);
 
-  if (stockRows.length === 0) {
-    return res.status(400).json({ message: 'Item not found' });
-  }
+  // Get total sold quantity from sales table
+  const [salesRows] = await pool.query(
+    'SELECT COALESCE(SUM(quantity), 0) AS totalSold FROM sales WHERE itemId = ?',
+    [itemId]
+  );
+  const soldQty = Number(salesRows[0]?.totalSold || 0);
 
-  const { openingQty, purchasedQty, soldQty } = stockRows[0];
-  const available = Number(openingQty || 0) + Number(purchasedQty || 0) - Number(soldQty || 0);
+  // Calculate available quantity
+  const available = openingQty + purchasedQty - soldQty;
   if (quantity > available) {
     return res.status(400).json({ message: `Sales quantity cannot exceed available stock (${available})` });
   }

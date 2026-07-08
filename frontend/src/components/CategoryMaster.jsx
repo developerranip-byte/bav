@@ -79,7 +79,7 @@ function CategoryMaster({ categories, onAddCategory, onUpdateCategory, onDeleteC
                     setEditingId(category.id);
                     setCategoryForm({ name: category.name, description: category.description || '', isActive: !!category.isActive });
                   }}>Edit</button>
-                  <button onClick={() => onDeleteCategory(category.id)} style={{ marginLeft: 8 }}>Delete</button>
+                  <button onClick={() => onDeleteCategory(category.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
                 </div>
               </li>
             ))}

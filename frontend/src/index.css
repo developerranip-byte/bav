@@ -79,6 +79,8 @@ nav { display: grid; gap: 10px; }
 form { display: grid; gap: 12px; }
 input, select, textarea, button { padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; }
 button { cursor: pointer; background: #2563eb; color: white; border: none; }
+button.danger { background: #dc2626; }
+button.danger:hover { background: #b91c1c; }
 textarea { min-height: 80px; resize: vertical; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 20px; }
 .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }

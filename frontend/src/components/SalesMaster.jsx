@@ -21,16 +21,20 @@ function SalesMaster({ items, sales, onAddSale }) {
       return;
     }
     setErrors({});
-    await onAddSale({
+    const result = await onAddSale({
       itemId: saleForm.itemId,
       quantity: Number(saleForm.quantity),
       salesDate: saleForm.salesDate,
     });
-    setSaleForm({
-      itemId: items[0]?.id || '',
-      quantity: 1,
-      salesDate: new Date().toISOString().slice(0, 10),
-    });
+    if (result && result.success) {
+      setSaleForm({
+        itemId: items[0]?.id || '',
+        quantity: 1,
+        salesDate: new Date().toISOString().slice(0, 10),
+      });
+    } else if (result && result.error) {
+      setErrors({ quantity: result.error });
+    }
   };
 
   const findItemName = (id) => items.find((item) => item.id === Number(id))?.name || '-';

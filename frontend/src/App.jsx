@@ -361,12 +361,16 @@ function App() {
       if (res.ok) {
         setToast({ type: 'success', message: 'Sale recorded' });
         fetchSales();
+        return { success: true };
       } else {
-        const text = await res.text();
-        setToast({ type: 'error', message: text || res.statusText });
+        const data = await res.json();
+        const errorMessage = data.message || res.statusText;
+        setToast({ type: 'error', message: errorMessage });
+        return { success: false, error: errorMessage };
       }
     } catch (err) {
       setToast({ type: 'error', message: err.message || 'Network error' });
+      return { success: false, error: err.message };
     }
   };
 
@@ -462,7 +466,7 @@ function App() {
           <Route path="/language" element={<LanguageMaster languages={languages} onAddLanguage={handleAddLanguage} onUpdateLanguage={handleUpdateLanguage} onDeleteLanguage={handleDeleteLanguage} />} />
           <Route path="/category" element={<CategoryMaster categories={categories} onAddCategory={handleAddCategory} onUpdateCategory={handleUpdateCategory} onDeleteCategory={handleDeleteCategory} />} />
           <Route path="/items" element={<ItemsMaster categories={categories} languages={languages} onAddItem={handleAddItem} onUpdateItem={handleUpdateItem} onDeleteItem={handleDeleteItem} items={items} />} />
-          <Route path="/purchase" element={<PurchaseMaster items={items} purchases={purchases} onAddPurchase={handleAddPurchase} />} />
+          <Route path="/purchase" element={<PurchaseMaster items={items} purchases={purchases} onAddPurchase={handleAddPurchase} authHeaders={authHeaders} />} />
           <Route path="/sales" element={<SalesMaster items={items} sales={sales} onAddSale={handleAddSale} />} />
           <Route path="/report" element={<ReportMaster reports={reports} authHeaders={authHeaders} />} />
           <Route path="/" element={activeMenu === 'dashboard' ? (

@@ -39,6 +39,9 @@ function ReportMaster({ reports, authHeaders }) {
                 <th>Item</th>
                 <th>Category</th>
                 <th>Language</th>
+                <th>Opening Qty</th>
+                <th>Total Purchase</th>
+                <th>Total Sold</th>
                 <th>Current Qty</th>
                 <th>Last Purchase</th>
                 <th>Last Sale</th>
@@ -51,6 +54,9 @@ function ReportMaster({ reports, authHeaders }) {
                   <td>{item.name}</td>
                   <td>{item.categoryName || '-'}</td>
                   <td>{item.languageName || '-'}</td>
+                  <td>{item.openingQty}</td>
+                  <td>{item.totalPurchased}</td>
+                  <td>{item.totalSold}</td>
                   <td>{item.currentQuantity}</td>
                   <td>{item.lastPurchaseDate ? new Date(item.lastPurchaseDate).toLocaleDateString() : '-'}</td>
                   <td>{item.lastSalesDate ? new Date(item.lastSalesDate).toLocaleDateString() : '-'}</td>
@@ -67,7 +73,9 @@ function ReportMaster({ reports, authHeaders }) {
             </tbody>
           </table>
         </div>
+      </section>
 
+      <section style={{ marginTop: 20 }}>
         <div className="card">
           <h3>{history.type === 'purchase' ? 'Purchase History' : history.type === 'sales' ? 'Sales History' : 'History'}</h3>
           {history.type ? (
