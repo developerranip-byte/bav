@@ -136,4 +136,4 @@ const initDB = async () => {
   console.log("Database initialization complete.");
 };
 
-initDB().catch(console.error);
+export default initDB;

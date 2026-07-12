@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import pool from './db.js';
+import initDB from './initDB.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import languageRoutes from './routes/languageRoutes.js';
 import itemRoutes from './routes/itemRoutes.js';
@@ -21,6 +22,16 @@ app.use(cors());
 app.use(express.json());
 
 app.locals.pool = pool;
+
+app.get('/api/init-db', async (req, res) => {
+  try {
+    await initDB();
+    res.json({ message: 'Database initialization completed successfully.' });
+  } catch (error) {
+    console.error('Init DB Error:', error);
+    res.status(500).json({ message: 'Database initialization failed.', error: error.message });
+  }
+});
 
 app.use('/api/auth', authRoutes);
 
