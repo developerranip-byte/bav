@@ -41,7 +41,7 @@ export const getItemPurchaseHistory = async (req, res) => {
   const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
   const [rows] = await pool.query(
-    `SELECT p.id, p.quantity, p.amount, p.purchaseDate, p.createdAt, u.username AS addedBy 
+    `SELECT p.id, p.quantity, p.amount, (p.quantity * p.amount) AS totalAmount, p.purchaseDate, p.createdAt, u.username AS addedBy 
      FROM purchases p 
      LEFT JOIN users u ON p.userId = u.id 
      WHERE p.itemId = ? 
@@ -64,7 +64,7 @@ export const getItemSalesHistory = async (req, res) => {
   const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
   const [rows] = await pool.query(
-    `SELECT s.id, s.quantity, s.salesPrice, s.salesDate, s.createdAt, u.username AS addedBy 
+    `SELECT s.id, s.quantity, s.salesPrice, s.salesPrice AS totalAmount, s.salesDate, s.createdAt, u.username AS addedBy 
      FROM sales s 
      LEFT JOIN users u ON s.userId = u.id 
      WHERE s.itemId = ? 

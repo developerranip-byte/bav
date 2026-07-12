@@ -2,6 +2,7 @@ export const getPurchases = async (req, res) => {
   const pool = req.app.locals.pool;
   const [rows] = await pool.query(
     `SELECT p.id, p.purchaseDate, p.itemId, p.quantity, p.amount,
+            (p.quantity * p.amount) AS totalAmount,
             i.name AS itemName, c.name AS categoryName, l.name AS languageName,
             u.username AS addedBy
       FROM purchases p

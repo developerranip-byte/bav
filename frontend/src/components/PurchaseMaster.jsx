@@ -214,22 +214,38 @@ function PurchaseMaster({ setToast }) {
 
         <div className="card">
           <h3>Purchase History</h3>
-          <ul className="list">
-            {purchases.map((purchase) => (
-              <li key={purchase.id}>
-                <div className="list-row">
-                  <strong>{findItemName(purchase.itemId)}</strong>
-                  <span>{new Date(purchase.purchaseDate).toLocaleDateString()}</span>
-                </div>
-                <p>Qty: {purchase.quantity}</p>
-                <p>Price: {CURRENCY_SYMBOL}{Number(purchase.amount).toFixed(2)}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <p>Total Amount: {CURRENCY_SYMBOL}{(Number(purchase.quantity) * Number(purchase.amount)).toFixed(2)}</p>
-                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Added By: {purchase.addedBy || 'System'}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <table className="data-table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total Amount</th>
+                <th>Date</th>
+                <th>Added By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {purchases.length > 0 ? (
+                purchases.map((purchase) => (
+                  <tr key={purchase.id}>
+                    <td>{findItemName(purchase.itemId)}</td>
+                    <td>{purchase.quantity}</td>
+                    <td>{CURRENCY_SYMBOL}{Number(purchase.amount).toFixed(2)}</td>
+                    <td>{CURRENCY_SYMBOL}{Number(purchase.totalAmount).toFixed(2)}</td>
+                    <td>{new Date(purchase.purchaseDate).toLocaleDateString()}</td>
+                    <td>{purchase.addedBy || 'System'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', color: '#64748b' }}>
+                    No purchases recorded
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </section>

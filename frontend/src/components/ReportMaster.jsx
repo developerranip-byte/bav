@@ -121,9 +121,7 @@ function ReportMaster({ setToast }) {
                       <td>{row.quantity}</td>
                       <td>
                         {CURRENCY_SYMBOL}
-                        {history.type === 'purchase'
-                          ? (Number(row.quantity) * Number(row.amount)).toFixed(2)
-                          : Number(row.salesPrice).toFixed(2)}
+                        {Number(row.totalAmount).toFixed(2)}
                       </td>
                       <td>{row.addedBy || 'System'}</td>
                     </tr>

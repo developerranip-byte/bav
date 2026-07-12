@@ -14,86 +14,14 @@ function Dashboard({ authHeaders }) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [langRes, catRes, itemRes, salesRes, purchaseRes] = await Promise.all([
-          fetch(`${API_BASE}/languages`, { headers: headers() }),
-          fetch(`${API_BASE}/categories`, { headers: headers() }),
-          fetch(`${API_BASE}/items`, { headers: headers() }),
-          fetch(`${API_BASE}/sales`, { headers: headers() }),
-          fetch(`${API_BASE}/purchases`, { headers: headers() }),
-        ]);
-
-        const languages = langRes.ok ? await langRes.json() : [];
-        const categories = catRes.ok ? await catRes.json() : [];
-        const items = itemRes.ok ? await itemRes.json() : [];
-        const sales = salesRes.ok ? await salesRes.json() : [];
-        const purchases = purchaseRes.ok ? await purchaseRes.json() : [];
-
-        setStats({
-          languages: languages.length,
-          categories: categories.length,
-          items: items.length,
-        });
-
-        // Calculate today's statistics
-        const todayObj = new Date();
-        const isToday = (dateString) => {
-          if (!dateString) return false;
-          const d = new Date(dateString);
-          return d.getFullYear() === todayObj.getFullYear() &&
-            d.getMonth() === todayObj.getMonth() &&
-            d.getDate() === todayObj.getDate();
-        };
-
-        const todaySales = sales.filter((s) => isToday(s.salesDate));
-        const todaySoldQty = todaySales.reduce((sum, s) => sum + Number(s.quantity), 0);
-        const todaySoldAmount = todaySales.reduce((sum, s) => sum + Number(s.salesPrice), 0);
-
-        const todayPurchases = purchases.filter((p) => isToday(p.purchaseDate));
-        const todayPurchasedQty = todayPurchases.reduce((sum, p) => sum + Number(p.quantity), 0);
-        const todayPurchasedAmount = todayPurchases.reduce((sum, p) => sum + (Number(p.quantity) * Number(p.amount)), 0);
-
-        setTodayStats({
-          soldQty: todaySoldQty,
-          soldAmount: todaySoldAmount,
-          purchasedQty: todayPurchasedQty,
-          purchasedAmount: todayPurchasedAmount
-        });
-
-        // Calculate weekly sales (last 7 days)
-        const lastWeekDate = new Date();
-        lastWeekDate.setDate(lastWeekDate.getDate() - 7);
-        lastWeekDate.setHours(0, 0, 0, 0);
-
-        const weeklySalesData = sales
-          .filter((s) => {
-            if (!s.salesDate) return false;
-            return new Date(s.salesDate) >= lastWeekDate;
-          })
-          .map((sale) => ({
-            id: sale.id,
-            itemName: items.find((item) => item.id === sale.itemId)?.name || '-',
-            quantity: sale.quantity,
-            salesDate: sale.salesDate,
-            addedBy: sale.addedBy,
-          }))
-          .sort((a, b) => new Date(b.salesDate) - new Date(a.salesDate));
-
-        const weeklyPurchasesData = purchases
-          .filter((p) => {
-            if (!p.purchaseDate) return false;
-            return new Date(p.purchaseDate) >= lastWeekDate;
-          })
-          .map((purchase) => ({
-            id: purchase.id,
-            itemName: items.find((item) => item.id === purchase.itemId)?.name || '-',
-            quantity: purchase.quantity,
-            purchaseDate: purchase.purchaseDate,
-            addedBy: purchase.addedBy,
-          }))
-          .sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
-
-        setWeeklySales(weeklySalesData);
-        setWeeklyPurchases(weeklyPurchasesData);
+        const res = await fetch(`${API_BASE}/dashboard/stats`, { headers: headers() });
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data.stats);
+          setTodayStats(data.todayStats);
+          setWeeklySales(data.weeklySales);
+          setWeeklyPurchases(data.weeklyPurchases);
+        }
       } catch (err) {
         console.error('Failed to fetch dashboard stats:', err);
       }

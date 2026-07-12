@@ -2,6 +2,7 @@ export const getSales = async (req, res) => {
   const pool = req.app.locals.pool;
   const [rows] = await pool.query(
     `SELECT s.id, s.itemId, s.quantity, s.salesPrice, s.salesDate,
+            s.salesPrice AS totalAmount,
             i.name AS itemName,
             u.username AS addedBy
       FROM sales s

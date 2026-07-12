@@ -10,6 +10,7 @@ import salesRoutes from './routes/salesRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from './controllers/authController.js';
 
@@ -47,6 +48,7 @@ app.use('/api/purchases', authMiddleware, purchaseRoutes);
 app.use('/api/sales', authMiddleware, salesRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
+app.use('/api/dashboard', authMiddleware, dashboardRoutes);
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);

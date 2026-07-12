@@ -158,21 +158,36 @@ function SalesMaster({ setToast }) {
 
         <div className="card">
           <h3>Sales History</h3>
-          <ul className="list">
-            {sales.map((sale) => (
-              <li key={sale.id}>
-                <div className="list-row">
-                  <strong>{findItemName(sale.itemId)}</strong>
-                  <span>{new Date(sale.salesDate).toLocaleDateString()}</span>
-                </div>
-                <p>Qty: {sale.quantity}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <p>Price: {CURRENCY_SYMBOL}{Number(sale?.salesPrice).toFixed(2)}</p>
-                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Added By: {sale.addedBy || 'System'}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <table className="data-table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Total Amount</th>
+                <th>Date</th>
+                <th>Added By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sales.length > 0 ? (
+                sales.map((sale) => (
+                  <tr key={sale.id}>
+                    <td>{findItemName(sale.itemId)}</td>
+                    <td>{sale.quantity}</td>
+                    <td>{CURRENCY_SYMBOL}{Number(sale?.totalAmount).toFixed(2)}</td>
+                    <td>{new Date(sale.salesDate).toLocaleDateString()}</td>
+                    <td>{sale.addedBy || 'System'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>
+                    No sales recorded
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </section>
