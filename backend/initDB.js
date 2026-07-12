@@ -68,11 +68,15 @@ CREATE TABLE IF NOT EXISTS users (
 
 const initDB = async () => {
   console.log("Connecting to database...");
+  const useSSL = process.env.DB_HOST && process.env.DB_HOST !== 'localhost';
+  
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     multipleStatements: true,
+    ...(useSSL && { ssl: { rejectUnauthorized: false } })
   });
 
   const dbName = process.env.DB_NAME || 'bav_db';
