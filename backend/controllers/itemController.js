@@ -1,3 +1,5 @@
+import xlsx from 'xlsx';
+
 export const getItems = async (req, res) => {
   const pool = req.app.locals.pool;
   const [rows] = await pool.query(
@@ -70,4 +72,72 @@ export const deleteItem = async (req, res) => {
   const { id } = req.params;
   await pool.query('DELETE FROM items WHERE id = ?', [id]);
   res.status(204).end();
+};
+
+export const exportItems = async (req, res) => {
+  const pool = req.app.locals.pool;
+  try {
+    const [rows] = await pool.query(
+      `SELECT i.id AS 'Item ID', i.name AS 'Name', i.isbn AS 'ISBN', 
+              i.openingQty AS 'Opening Qty',
+              c.name AS 'Category', l.name AS 'Language',
+              i.categoryId AS 'Category ID', i.languageId AS 'Language ID'
+       FROM items i
+       LEFT JOIN categories c ON i.categoryId = c.id
+       LEFT JOIN languages l ON i.languageId = l.id
+       ORDER BY i.id DESC`
+    );
+
+    const worksheet = xlsx.utils.json_to_sheet(rows);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Items');
+    
+    const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Disposition', 'attachment; filename="ItemsMaster.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (err) {
+    console.error('Export error:', err);
+    res.status(500).json({ message: 'Failed to export items' });
+  }
+};
+
+export const importItems = async (req, res) => {
+  const pool = req.app.locals.pool;
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+
+  try {
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+    if (data.length === 0) {
+      return res.status(400).json({ message: 'Excel file is empty' });
+    }
+
+    let importedCount = 0;
+    for (const row of data) {
+      const name = row['Name'];
+      if (!name) continue;
+
+      const categoryId = row['Category ID'] || null;
+      const languageId = row['Language ID'] || null;
+      const isbn = row['ISBN'] || null;
+      const openingQty = row['Opening Qty'] || 0;
+      
+      await pool.query(
+        'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, ?, 1)',
+        [name, categoryId, languageId, isbn, openingQty]
+      );
+      importedCount++;
+    }
+
+    res.json({ message: `Successfully imported ${importedCount} items` });
+  } catch (err) {
+    console.error('Import error:', err);
+    res.status(500).json({ message: 'Failed to import items' });
+  }
 };

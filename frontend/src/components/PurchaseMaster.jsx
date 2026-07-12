@@ -119,14 +119,79 @@ function PurchaseMaster({ setToast }) {
 
   const findItemName = (itemId) => items.find((item) => item.id === Number(itemId))?.name || '-';
 
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/purchases/export`, { headers: headers() });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'StockMaster.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        setToast({ type: 'error', message: 'Failed to export' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: 'Network error' });
+    }
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API_BASE}/purchases/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setToast({ type: 'success', message: data.message });
+        fetchData();
+      } else {
+        setToast({ type: 'error', message: data.message || 'Import failed' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: 'Network error' });
+    }
+    e.target.value = null;
+  };
+
   return (
     <section className="page-card">
       <div className="page-header">
         <div>
           <h2>Stock Master</h2>
           <span className="page-badge">stock_master</span>
+          <p style={{ marginTop: 8 }}>Record stock transactions for items.</p>
         </div>
-        <p>Record stock transactions for items.</p>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input 
+            type="file" 
+            id="import-excel-stock" 
+            accept=".xlsx, .xls" 
+            style={{ display: 'none' }} 
+            onChange={handleImport}
+          />
+          <label htmlFor="import-excel-stock" className="menu-btn" style={{ background: '#5C060E', color: 'white', textAlign: 'center', margin: 0 }}>
+            Import Excel
+          </label>
+          <button onClick={handleExport} style={{ background: '#16a34a' }}>
+            Export Excel
+          </button>
+        </div>
       </div>
 
       <section className="content-grid">

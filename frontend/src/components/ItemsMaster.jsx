@@ -110,14 +110,79 @@ function ItemsMaster({ setToast }) {
   const findCategoryName = (categoryId) => categories.find((cat) => cat.id === Number(categoryId))?.name || '-';
   const findLanguageName = (languageId) => languages.find((lang) => lang.id === Number(languageId))?.name || '-';
 
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/items/export`, { headers: headers() });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ItemsMaster.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        setToast({ type: 'error', message: 'Failed to export' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: 'Network error' });
+    }
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API_BASE}/items/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setToast({ type: 'success', message: data.message });
+        fetchData();
+      } else {
+        setToast({ type: 'error', message: data.message || 'Import failed' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: 'Network error' });
+    }
+    e.target.value = null;
+  };
+
   return (
     <section className="page-card">
       <div className="page-header">
         <div>
           <h2>Items Master</h2>
           <span className="page-badge">items_master</span>
+          <p style={{ marginTop: 8 }}>Maintain item master details including category, language, quantity, and status.</p>
         </div>
-        <p>Maintain item master details including category, language, quantity, and status.</p>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input 
+            type="file" 
+            id="import-excel" 
+            accept=".xlsx, .xls" 
+            style={{ display: 'none' }} 
+            onChange={handleImport}
+          />
+          <label htmlFor="import-excel" className="menu-btn" style={{ background: '#5C060E', color: 'white', textAlign: 'center', margin: 0 }}>
+            Import Excel
+          </label>
+          <button onClick={handleExport} style={{ background: '#16a34a' }}>
+            Export Excel
+          </button>
+        </div>
       </div>
 
       <section className="content-grid">
