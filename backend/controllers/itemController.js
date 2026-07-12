@@ -1,7 +1,8 @@
+import pool from '../db.js';
 import xlsx from 'xlsx';
 
 export const getItems = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -71,7 +72,7 @@ export const getItems = async (req, res) => {
 };
 
 export const searchItems = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const query = (req.query.q || '').trim();
   if (!query) {
     return res.json([]);
@@ -89,7 +90,7 @@ export const searchItems = async (req, res) => {
 };
 
 export const createItem = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { name, categoryId, languageId, isbn = null, openingQty = 0, isActive = true } = req.body;
   const [result] = await pool.query(
     'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, ?, ?)',
@@ -107,7 +108,7 @@ export const createItem = async (req, res) => {
 };
 
 export const updateItem = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { id } = req.params;
   const { name, categoryId, languageId, isbn = null, openingQty = 0, isActive = true } = req.body;
   await pool.query(
@@ -118,14 +119,14 @@ export const updateItem = async (req, res) => {
 };
 
 export const deleteItem = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { id } = req.params;
   await pool.query('DELETE FROM items WHERE id = ?', [id]);
   res.status(204).end();
 };
 
 export const exportItems = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   try {
     const [rows] = await pool.query(
       `SELECT i.id AS 'Item ID', i.name AS 'Name', i.isbn AS 'ISBN', 
@@ -154,7 +155,7 @@ export const exportItems = async (req, res) => {
 };
 
 export const importItems = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }

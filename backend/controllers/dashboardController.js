@@ -1,5 +1,6 @@
+import pool from '../db.js';
 export const getDashboardStats = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
 
   try {
     // 1. Stats Counts

@@ -1,3 +1,4 @@
+import pool from '../db.js';
 import bcrypt from 'bcrypt';
 
 // Middleware to check if user is admin
@@ -10,13 +11,13 @@ export const requireAdmin = (req, res, next) => {
 };
 
 export const getUsers = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const [rows] = await pool.query('SELECT id, username, userType, isActive, createdAt FROM users ORDER BY createdAt DESC');
   res.json(rows);
 };
 
 export const createUser = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { username, password, userType } = req.body;
 
   if (!username || !password || !userType) {
@@ -40,7 +41,7 @@ export const createUser = async (req, res) => {
 };
 
 export const updateUser = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { id } = req.params;
   const { password, userType, isActive } = req.body;
 

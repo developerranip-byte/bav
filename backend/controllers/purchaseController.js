@@ -1,7 +1,8 @@
+import pool from '../db.js';
 import xlsx from 'xlsx';
 
 export const getPurchases = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -67,7 +68,7 @@ export const getPurchases = async (req, res) => {
 };
 
 export const createPurchase = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { itemId, quantity, amount, purchaseDate = new Date() } = req.body;
 
   const [itemRows] = await pool.query('SELECT isActive FROM items WHERE id = ?', [itemId]);
@@ -85,7 +86,7 @@ export const createPurchase = async (req, res) => {
 };
 
 export const exportPurchases = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   try {
     const [rows] = await pool.query(
       `SELECT p.id AS 'Stock ID', p.purchaseDate AS 'Date', p.itemId AS 'Item ID', 
@@ -114,7 +115,7 @@ export const exportPurchases = async (req, res) => {
 };
 
 export const importPurchases = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }

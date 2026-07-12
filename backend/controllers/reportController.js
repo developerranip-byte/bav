@@ -1,5 +1,6 @@
+import pool from '../db.js';
 export const getItemReports = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -89,7 +90,7 @@ export const getItemReports = async (req, res) => {
 };
 
 export const getItemPurchaseHistory = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { id } = req.params;
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = 10;
@@ -112,7 +113,7 @@ export const getItemPurchaseHistory = async (req, res) => {
 };
 
 export const getItemSalesHistory = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { id } = req.params;
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = 10;

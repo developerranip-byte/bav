@@ -1,5 +1,6 @@
+import pool from '../db.js';
 export const getSales = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -63,7 +64,7 @@ export const getSales = async (req, res) => {
 };
 
 export const createSale = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { itemId, quantity = 1, salesPrice = 0.00, salesDate = new Date() } = req.body;
 
   if (!itemId || !Number(itemId)) {

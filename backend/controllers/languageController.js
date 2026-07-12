@@ -1,11 +1,12 @@
+import pool from '../db.js';
 export const getLanguages = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const [rows] = await pool.query('SELECT * FROM languages ORDER BY id DESC');
   res.json(rows);
 };
 
 export const createLanguage = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { name, code, isActive = true } = req.body;
   const [result] = await pool.query(
     'INSERT INTO languages (name, code, isActive) VALUES (?, ?, ?)',
@@ -15,7 +16,7 @@ export const createLanguage = async (req, res) => {
 };
 
 export const updateLanguage = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { id } = req.params;
   const { name, code, isActive = true } = req.body;
   await pool.query('UPDATE languages SET name = ?, code = ?, isActive = ? WHERE id = ?', [name, code, isActive ? 1 : 0, id]);
@@ -23,7 +24,7 @@ export const updateLanguage = async (req, res) => {
 };
 
 export const deleteLanguage = async (req, res) => {
-  const pool = req.app.locals.pool;
+  
   const { id } = req.params;
   await pool.query('DELETE FROM languages WHERE id = ?', [id]);
   res.status(204).end();
