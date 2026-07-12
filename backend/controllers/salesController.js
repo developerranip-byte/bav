@@ -2,9 +2,11 @@ export const getSales = async (req, res) => {
   const pool = req.app.locals.pool;
   const [rows] = await pool.query(
     `SELECT s.id, s.itemId, s.quantity, s.salesPrice, s.salesDate,
-            i.name AS itemName
+            i.name AS itemName,
+            u.username AS addedBy
       FROM sales s
       LEFT JOIN items i ON s.itemId = i.id
+      LEFT JOIN users u ON s.userId = u.id
       ORDER BY s.salesDate DESC, s.id DESC`
   );
   res.json(rows);
@@ -54,10 +56,12 @@ export const createSale = async (req, res) => {
     return res.status(400).json({ message: `Sales quantity cannot exceed available stock (${available})` });
   }
 
+  const userId = req.user ? req.user.id : null;
+
   const [result] = await pool.query(
-    'INSERT INTO sales (itemId, quantity, salesPrice, salesDate) VALUES (?, ?, ?, ?)',
-    [itemId, quantity, salesPrice, salesDate]
+    'INSERT INTO sales (itemId, quantity, salesPrice, salesDate, userId) VALUES (?, ?, ?, ?, ?)',
+    [itemId, quantity, salesPrice, salesDate, userId]
   );
 
-  res.status(201).json({ id: result.insertId, itemId, quantity, salesPrice, salesDate });
+  res.status(201).json({ id: result.insertId, itemId, quantity, salesPrice, salesDate, userId });
 };

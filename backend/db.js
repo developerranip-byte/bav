@@ -37,8 +37,10 @@ CREATE TABLE IF NOT EXISTS purchases (
   amount DECIMAL(12,2) NOT NULL,
   totalpurchaseamount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   purchaseDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
+  userId INT,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE
+  FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS sales (
@@ -47,8 +49,19 @@ CREATE TABLE IF NOT EXISTS sales (
   quantity INT NOT NULL DEFAULT 1,
   salesPrice DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   salesDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
+  userId INT,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE
+  FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  userType VARCHAR(50) NOT NULL DEFAULT 'user',
+  isActive TINYINT(1) NOT NULL DEFAULT 1,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 `;
 
@@ -93,9 +106,24 @@ const initializeDatabase = async () => {
   await ensureColumn('purchases', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
   await ensureColumn('sales', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
   await ensureColumn('sales', 'salesPrice', 'salesPrice DECIMAL(12,2) NOT NULL DEFAULT 0.00');
+  await ensureColumn('purchases', 'userId', 'userId INT, ADD CONSTRAINT fk_purchases_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL');
+  await ensureColumn('sales', 'userId', 'userId INT, ADD CONSTRAINT fk_sales_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL');
   await dropColumnIfExists('sales', 'amount');
   await dropColumnIfExists('sales', 'customerName');
   await dropColumnIfExists('sales', 'customerPhone');
+
+  const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', ['admin']);
+  if (userRows.length === 0) {
+    try {
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash('admin', 10);
+      await connection.query('INSERT INTO users (username, password, userType) VALUES (?, ?, ?)', ['admin', hashedPassword, 'super_admin']);
+      console.log('Default super_admin account created (admin/admin)');
+    } catch (err) {
+      console.error('Failed to create default admin account:', err);
+    }
+  }
+
   await connection.end();
 
   return mysql.createPool({

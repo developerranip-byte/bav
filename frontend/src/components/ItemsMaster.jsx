@@ -122,7 +122,7 @@ function ItemsMaster({ setToast }) {
 
       <section className="content-grid">
         <div className="card">
-          <h3>Add Item</h3>
+          <h3>{editingId ? 'Edit' : 'Add'} Item</h3>
           <form onSubmit={handleSubmit}>
             <label className="field-label">Item Name</label>
             <input
@@ -175,7 +175,22 @@ function ItemsMaster({ setToast }) {
               <option value="false">No</option>
             </select>
 
-            <button type="submit">Save Item</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button type="submit" style={{ flex: 1 }}>{editingId ? 'Update' : 'Save'} Item</button>
+              {editingId && (
+                <button type="button" onClick={() => { 
+                  setEditingId(null); 
+                  setItemForm({
+                    name: '',
+                    categoryId: categories[0]?.id || '',
+                    languageId: languages[0]?.id || '',
+                    isbn: '',
+                    isActive: true,
+                  });
+                  setErrors({});
+                }} style={{ background: '#64748b', flex: 1 }}>Cancel</button>
+              )}
+            </div>
           </form>
         </div>
 

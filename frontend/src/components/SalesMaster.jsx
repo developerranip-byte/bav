@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
+import { CURRENCY_SYMBOL } from '../utils/config';
 
 function SalesMaster({ setToast }) {
   const [items, setItems] = useState([]);
@@ -165,7 +166,10 @@ function SalesMaster({ setToast }) {
                   <span>{new Date(sale.salesDate).toLocaleDateString()}</span>
                 </div>
                 <p>Qty: {sale.quantity}</p>
-                <p>Price: ${Number(sale?.salesPrice).toFixed(2)}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <p>Price: {CURRENCY_SYMBOL}{Number(sale?.salesPrice).toFixed(2)}</p>
+                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Added By: {sale.addedBy || 'System'}</p>
+                </div>
               </li>
             ))}
           </ul>

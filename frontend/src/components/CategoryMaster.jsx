@@ -89,7 +89,7 @@ function CategoryMaster({ authHeaders, setToast }) {
 
       <section className="content-grid">
         <div className="card">
-          <h3>Add Category</h3>
+          <h3>{editingId ? 'Edit' : 'Add'} Category</h3>
           <form onSubmit={handleCategorySubmit}>
                   <label className="field-label">Category Name</label>
             <input
@@ -112,7 +112,12 @@ function CategoryMaster({ authHeaders, setToast }) {
               value={categoryForm.description}
               onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
             />
-            <button type="submit">Save Category</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button type="submit" style={{ flex: 1 }}>{editingId ? 'Update' : 'Save'} Category</button>
+              {editingId && (
+                <button type="button" onClick={() => { setEditingId(null); setCategoryForm({ name: '', description: '', isActive: true }); setErrors({}); }} style={{ background: '#64748b', flex: 1 }}>Cancel</button>
+              )}
+            </div>
           </form>
         </div>
 

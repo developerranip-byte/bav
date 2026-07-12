@@ -31,7 +31,7 @@ const seed = async () => {
     ['Magazines', 'Monthly and quarterly publication magazines', 1],
     ['Accessories', 'Photos, diaries, and general items', 1]
   ];
-  
+
   const categoryIds = [];
   for (const cat of categories) {
     const [res] = await connection.query(
@@ -82,19 +82,19 @@ const seed = async () => {
   }
   console.log(`Inserted ${itemIds.length} items.`);
 
-  // 4. Insert Purchases (Rates/Prices in 'amount', Total in 'totalpurchaseamount')
+  // 4. Insert Purchases (Rates/Prices in 'amount', Total in 'totalpurchaseamount', userId)
   console.log('Inserting sample purchases...');
   const purchases = [
-    [itemIds[0], 20, 15.00, 20 * 15.00, '2026-07-01'], // Spiritual Living: 20 units @ $15.00/unit
-    [itemIds[1], 10, 8.50, 10 * 8.50, '2026-07-02'],  // Dhyan Sadhna: 10 units @ $8.50/unit
-    [itemIds[2], 100, 2.00, 100 * 2.00, '2026-07-03'], // Satsang Monthly: 100 units @ $2.00/unit
-    [itemIds[3], 15, 10.00, 15 * 10.00, '2026-07-04'], // Vegetarian Recipes: 15 units @ $10.00/unit
-    [itemIds[4], 25, 12.00, 25 * 12.00, '2026-07-05']  // Gita Pravachan: 25 units @ $12.00/unit
+    [itemIds[0], 20, 15.00, 20 * 15.00, '2026-07-01', 1], // Spiritual Living: 20 units @ $15.00/unit
+    [itemIds[1], 10, 8.50, 10 * 8.50, '2026-07-02', 1],  // Dhyan Sadhna: 10 units @ $8.50/unit
+    [itemIds[2], 100, 2.00, 100 * 2.00, '2026-07-03', 1], // Satsang Monthly: 100 units @ $2.00/unit
+    [itemIds[3], 15, 10.00, 15 * 10.00, '2026-07-04', 1], // Vegetarian Recipes: 15 units @ $10.00/unit
+    [itemIds[4], 25, 12.00, 25 * 12.00, '2026-07-05', 1]  // Gita Pravachan: 25 units @ $12.00/unit
   ];
 
   for (const pur of purchases) {
     await connection.query(
-      'INSERT INTO purchases (itemId, quantity, amount, totalpurchaseamount, purchaseDate) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO purchases (itemId, quantity, amount, totalpurchaseamount, purchaseDate, userId) VALUES (?, ?, ?, ?, ?, ?)',
       pur
     );
     itemPurchasePrices[pur[0]] = pur[2];
@@ -104,15 +104,15 @@ const seed = async () => {
   // 5. Insert Sales (Calculated based on purchase unit price * sale quantity)
   console.log('Inserting sample sales...');
   const sales = [
-    [itemIds[0], 5, itemPurchasePrices[itemIds[0]] * 5, '2026-07-06'],  // Spiritual Living: 5 units @ $15.00 = $75.00
-    [itemIds[1], 2, itemPurchasePrices[itemIds[1]] * 2, '2026-07-07'],  // Dhyan Sadhna: 2 units @ $8.50 = $17.00
-    [itemIds[2], 30, itemPurchasePrices[itemIds[2]] * 30, '2026-07-08'], // Satsang Monthly: 30 units @ $2.00 = $60.00
-    [itemIds[3], 4, itemPurchasePrices[itemIds[3]] * 4, '2026-07-09']   // Vegetarian Recipes: 4 units @ $10.00 = $40.00
+    [itemIds[0], 5, itemPurchasePrices[itemIds[0]] * 5, '2026-07-06', 1],  // Spiritual Living: 5 units @ $15.00 = $75.00
+    [itemIds[1], 2, itemPurchasePrices[itemIds[1]] * 2, '2026-07-07', 1],  // Dhyan Sadhna: 2 units @ $8.50 = $17.00
+    [itemIds[2], 30, itemPurchasePrices[itemIds[2]] * 30, '2026-07-08', 1], // Satsang Monthly: 30 units @ $2.00 = $60.00
+    [itemIds[3], 4, itemPurchasePrices[itemIds[3]] * 4, '2026-07-09', 1]   // Vegetarian Recipes: 4 units @ $10.00 = $40.00
   ];
 
   for (const sale of sales) {
     await connection.query(
-      'INSERT INTO sales (itemId, quantity, salesPrice, salesDate) VALUES (?, ?, ?, ?)',
+      'INSERT INTO sales (itemId, quantity, salesPrice, salesDate, userId) VALUES (?, ?, ?, ?, ?)',
       sale
     );
   }

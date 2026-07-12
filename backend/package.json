@@ -5,12 +5,17 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "seed": "node seed.js",
+    "seed:users": "node seedUsers.js",
+    "truncate": "node truncate.js"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.5.2"
   }
 }

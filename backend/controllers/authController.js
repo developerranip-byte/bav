@@ -1,26 +1,40 @@
-import crypto from 'crypto';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { ROLE_MODULES } from '../config/roles.js';
 
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'admin';
-const validTokens = new Set();
+export const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_bav_key';
 
-export const login = (req, res) => {
+export const login = async (req, res) => {
   const { username, password } = req.body;
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    const token = crypto.randomBytes(32).toString('hex');
-    validTokens.add(token);
-    return res.json({ token, user: ADMIN_USERNAME });
+  const pool = req.app.locals.pool;
+
+  try {
+    const [rows] = await pool.query('SELECT * FROM users WHERE username = ? AND isActive = 1', [username]);
+    if (rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    const user = rows[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    const modules = ROLE_MODULES[user.userType] || [];
+    
+    const token = jwt.sign(
+      { id: user.id, username: user.username, userType: user.userType, modules },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({ token, user: user.username, userType: user.userType, modules });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-  return res.status(401).json({ message: 'Invalid username or password' });
 };
 
 export const logout = (req, res) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (token) {
-    validTokens.delete(token);
-  }
   res.status(204).end();
 };
-
-export const verifyToken = (token) => validTokens.has(token);

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
+import { CURRENCY_SYMBOL } from '../utils/config';
 
 function PurchaseMaster({ setToast }) {
   const [items, setItems] = useState([]);
@@ -221,8 +222,11 @@ function PurchaseMaster({ setToast }) {
                   <span>{new Date(purchase.purchaseDate).toLocaleDateString()}</span>
                 </div>
                 <p>Qty: {purchase.quantity}</p>
-                <p>Price: ${Number(purchase.amount).toFixed(2)}</p>
-                <p>Total Amount: ${(Number(purchase.quantity) * Number(purchase.amount)).toFixed(2)}</p>
+                <p>Price: {CURRENCY_SYMBOL}{Number(purchase.amount).toFixed(2)}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <p>Total Amount: {CURRENCY_SYMBOL}{(Number(purchase.quantity) * Number(purchase.amount)).toFixed(2)}</p>
+                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Added By: {purchase.addedBy || 'System'}</p>
+                </div>
               </li>
             ))}
           </ul>

@@ -1,0 +1,158 @@
+import { useEffect, useState } from 'react';
+import { API_BASE } from '../utils/api';
+
+function UserMaster({ authHeaders, setToast }) {
+  const [users, setUsers] = useState([]);
+  const [form, setForm] = useState({ id: null, username: '', password: '', userType: 'user', isActive: 1 });
+  const [isEditing, setIsEditing] = useState(false);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/users`, { headers: authHeaders() });
+      if (res.ok) {
+        setUsers(await res.json());
+      } else {
+        setToast({ type: 'error', message: 'Failed to fetch users (Access Denied?)' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: 'Network error' });
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.username) return setToast({ type: 'error', message: 'Username is required' });
+    if (!isEditing && !form.password) return setToast({ type: 'error', message: 'Password is required for new users' });
+
+    try {
+      const url = isEditing ? `${API_BASE}/users/${form.id}` : `${API_BASE}/users`;
+      const method = isEditing ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: authHeaders(),
+        body: JSON.stringify(form)
+      });
+
+      if (res.ok) {
+        setToast({ type: 'success', message: `User ${isEditing ? 'updated' : 'created'} successfully` });
+        setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1 });
+        setIsEditing(false);
+        fetchUsers();
+      } else {
+        const error = await res.json();
+        setToast({ type: 'error', message: error.message || 'Error saving user' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: 'Network error' });
+    }
+  };
+
+  const editUser = (user) => {
+    setForm({ id: user.id, username: user.username, password: '', userType: user.userType, isActive: user.isActive });
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1 });
+    setIsEditing(false);
+  };
+
+  return (
+    <section className="page-card">
+      <div className="page-header">
+        <div>
+          <h2>User Master</h2>
+          <span className="page-badge">user_master</span>
+        </div>
+        <p>Manage system users, roles, and access controls.</p>
+      </div>
+
+      <section className="content-grid">
+        <div className="card">
+          <h3>{isEditing ? 'Edit User' : 'Add New User'}</h3>
+          <form onSubmit={handleSubmit}>
+            <label className="field-label">Username</label>
+            <input
+              placeholder="Username"
+              value={form.username}
+              readOnly={isEditing}
+              style={isEditing ? { background: '#f1f5f9', color: '#64748b' } : {}}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+            />
+
+            <label className="field-label">{isEditing ? 'New Password (leave blank to keep current)' : 'Password'}</label>
+            <input
+              type="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+
+            <label className="field-label">User Role</label>
+            <select value={form.userType} onChange={(e) => setForm({ ...form, userType: e.target.value })}>
+              <option value="user">User (Limited Access)</option>
+              <option value="admin">Admin (Full Access)</option>
+              <option value="super_admin">Super Admin</option>
+            </select>
+
+            {isEditing && (
+              <>
+                <label className="field-label">Status</label>
+                <select value={form.isActive} onChange={(e) => setForm({ ...form, isActive: Number(e.target.value) })}>
+                  <option value={1}>Active</option>
+                  <option value={0}>Disabled</option>
+                </select>
+              </>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button type="submit" style={{ flex: 1 }}>{isEditing ? 'Update User' : 'Create User'}</button>
+              {isEditing && (
+                <button type="button" onClick={cancelEdit} style={{ background: '#64748b', flex: 1 }}>Cancel</button>
+              )}
+            </div>
+          </form>
+        </div>
+
+        <div className="card" style={{ overflowX: 'auto' }}>
+          <h3>System Users</h3>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id}>
+                  <td data-label="Username"><strong>{user.username}</strong></td>
+                  <td data-label="Role"><span className="badge book">{user.userType.replace('_', ' ')}</span></td>
+                  <td data-label="Status">
+                    <span className={`status-pill ${user.isActive ? 'active' : ''}`}>
+                      {user.isActive ? 'Active' : 'Disabled'}
+                    </span>
+                  </td>
+                  <td data-label="Actions">
+                    <button onClick={() => editUser(user)} style={{ padding: '6px 12px', fontSize: '12px' }}>Edit</button>
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr><td colSpan="4" style={{ textAlign: 'center', color: '#64748b' }}>No users found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  );
+}
+
+export default UserMaster;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
+import { CURRENCY_SYMBOL } from '../utils/config';
 
 function ReportMaster({ setToast }) {
   const [reports, setReports] = useState([]);
@@ -104,20 +105,31 @@ function ReportMaster({ setToast }) {
           <h3>{history.type === 'purchase' ? 'Purchase History' : history.type === 'sales' ? 'Sales History' : 'History'}</h3>
           {history.type ? (
             <>
-              <ul className="list">
-                {history.rows.map((row) => (
-                  <li key={row.id}>
-                    <div className="list-row">
-                      <strong>
+              <table className="data-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Quantity</th>
+                    <th>Total Amount</th>
+                    <th>Added By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.rows.map((row) => (
+                    <tr key={row.id}>
+                      <td>{new Date(history.type === 'purchase' ? row.purchaseDate : row.salesDate).toLocaleDateString()}</td>
+                      <td>{row.quantity}</td>
+                      <td>
+                        {CURRENCY_SYMBOL}
                         {history.type === 'purchase'
-                          ? `Purchased Qty: ${row.quantity} - Price: ₹${Number(row?.amount).toFixed(2)}`
-                          : `Sold Qty: ${row.quantity} - Sales Price: ₹${(Number(row.quantity) * Number(row.salesPrice)).toFixed(2)}`}
-                      </strong>
-                      <span>{new Date(history.type === 'purchase' ? row.purchaseDate : row.salesDate).toLocaleDateString()}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                          ? (Number(row.quantity) * Number(row.amount)).toFixed(2)
+                          : Number(row.salesPrice).toFixed(2)}
+                      </td>
+                      <td>{row.addedBy || 'System'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
                 <button
                   disabled={history.page <= 1}

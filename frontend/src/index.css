@@ -5,7 +5,7 @@
 }
 body {
   margin: 0;
-  background: linear-gradient(135deg, #eff6ff, #f8fafc);
+  background: linear-gradient(135deg, #fef2f2, #f8fafc);
 }
 * { box-sizing: border-box; }
 .app-shell {
@@ -32,8 +32,8 @@ nav { display: grid; gap: 10px; }
   cursor: pointer;
 }
 .menu-btn.active {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: #dc2626;
+  border-color: #dc2626;
 }
 .main-content { flex: 1; padding: 24px; }
 .topbar { margin-bottom: 20px; }
@@ -44,8 +44,8 @@ nav { display: grid; gap: 10px; }
   margin-top: 6px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #fee2e2;
+  color: #b91c1c;
   font-size: 12px;
   font-weight: bold;
   text-transform: lowercase;
@@ -73,21 +73,21 @@ nav { display: grid; gap: 10px; }
 }
 .stats-card strong { display: block; font-size: 28px; margin: 8px 0; }
 .stats-card span { color: #64748b; }
-.stats-card.blue { border-top: 4px solid #2563eb; }
+.stats-card.blue { border-top: 4px solid #dc2626; }
 .stats-card.green { border-top: 4px solid #16a34a; }
 .stats-card.purple { border-top: 4px solid #7c3aed; }
 form { display: grid; gap: 12px; }
 input, select, textarea, button { padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; }
-button { cursor: pointer; background: #2563eb; color: white; border: none; }
-button.danger { background: #dc2626; }
-button.danger:hover { background: #b91c1c; }
+button { cursor: pointer; background: #dc2626; color: white; border: none; }
+button.danger { background: #991b1b; }
+button.danger:hover { background: #7f1d1d; }
 textarea { min-height: 80px; resize: vertical; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 20px; }
 .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .list li { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; }
 .list li p { margin: 4px 0 0; color: #64748b; }
 .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; text-transform: capitalize; margin-bottom: 8px; }
-.badge.book { background: #dbeafe; color: #1d4ed8; }
+.badge.book { background: #fee2e2; color: #b91c1c; }
 .badge.audio { background: #fef3c7; color: #92400e; }
 .badge.video { background: #dcfce7; color: #166534; }
 

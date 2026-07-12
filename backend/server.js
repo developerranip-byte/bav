@@ -9,7 +9,9 @@ import purchaseRoutes from './routes/purchaseRoutes.js';
 import salesRoutes from './routes/salesRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import authRoutes from './routes/authRoutes.js';
-import { verifyToken } from './controllers/authController.js';
+import userRoutes from './routes/userRoutes.js';
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from './controllers/authController.js';
 
 const app = express();
 const PORT = process.env.PORT ?? 5000;
@@ -25,10 +27,17 @@ app.use('/api/auth', authRoutes);
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token || !verifyToken(token)) {
+  if (!token) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
-  next();
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid or expired token' });
+  }
 };
 
 app.use('/api/categories', authMiddleware, categoryRoutes);
@@ -37,6 +46,7 @@ app.use('/api/items', authMiddleware, itemRoutes);
 app.use('/api/purchases', authMiddleware, purchaseRoutes);
 app.use('/api/sales', authMiddleware, salesRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
+app.use('/api/users', authMiddleware, userRoutes);
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);

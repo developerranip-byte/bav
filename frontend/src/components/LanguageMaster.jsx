@@ -90,7 +90,7 @@ function LanguageMaster({ setToast }) {
 
       <section className="content-grid">
         <div className="card">
-          <h3>Add Language</h3>
+          <h3>{editingId ? 'Edit' : 'Add'} Language</h3>
           <form onSubmit={handleSubmit}>
             <label className="field-label">Language Name</label>
             <input
@@ -116,7 +116,12 @@ function LanguageMaster({ setToast }) {
               <option value="false">No</option>
             </select>
 
-            <button type="submit">Save Language</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button type="submit" style={{ flex: 1 }}>{editingId ? 'Update' : 'Save'} Language</button>
+              {editingId && (
+                <button type="button" onClick={() => { setEditingId(null); setLanguageForm({ name: '', code: '', isActive: true }); setErrors({}); }} style={{ background: '#64748b', flex: 1 }}>Cancel</button>
+              )}
+            </div>
           </form>
         </div>
 
