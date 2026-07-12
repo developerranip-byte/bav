@@ -1,142 +1,17 @@
 import mysql from 'mysql2/promise';
+import 'dotenv/config';
 
-const schema = `
-CREATE TABLE IF NOT EXISTS categories (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  isActive TINYINT(1) NOT NULL DEFAULT 1,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+const dbName = process.env.DB_NAME || 'bav_db';
 
-CREATE TABLE IF NOT EXISTS languages (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  code VARCHAR(50) NOT NULL,
-  isActive TINYINT(1) NOT NULL DEFAULT 1,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: dbName,
+  multipleStatements: true,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
 
-CREATE TABLE IF NOT EXISTS items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  categoryId INT,
-  languageId INT,
-  isbn VARCHAR(255),
-  openingQty INT NOT NULL DEFAULT 0,
-  isActive TINYINT(1) NOT NULL DEFAULT 1,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE SET NULL,
-  FOREIGN KEY (languageId) REFERENCES languages(id) ON DELETE SET NULL
-);
-
-CREATE TABLE IF NOT EXISTS purchases (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  itemId INT NOT NULL,
-  quantity INT NOT NULL,
-  amount DECIMAL(12,2) NOT NULL,
-  totalpurchaseamount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-  purchaseDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
-  userId INT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE,
-  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
-);
-
-CREATE TABLE IF NOT EXISTS sales (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  itemId INT NOT NULL,
-  quantity INT NOT NULL DEFAULT 1,
-  salesPrice DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-  salesDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
-  userId INT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE,
-  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
-);
-
-CREATE TABLE IF NOT EXISTS users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  userType VARCHAR(50) NOT NULL DEFAULT 'user',
-  isActive TINYINT(1) NOT NULL DEFAULT 1,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-`;
-
-const initializeDatabase = async () => {
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    // allow executing multiple statements in the schema string
-    multipleStatements: true,
-  });
-
-  const dbName = process.env.DB_NAME || 'bav_db';
-  await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-  await connection.query(`USE \`${dbName}\``);
-  await connection.query(schema);
-
-  const ensureColumn = async (table, column, definition) => {
-    const [rows] = await connection.query(
-      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
-      [dbName, table, column]
-    );
-    if (!rows.length) {
-      await connection.query(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
-    }
-  };
-
-  const dropColumnIfExists = async (table, column) => {
-    const [rows] = await connection.query(
-      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
-      [dbName, table, column]
-    );
-    if (rows.length) {
-      await connection.query(`ALTER TABLE \`${table}\` DROP COLUMN \`${column}\``);
-    }
-  };
-
-  await ensureColumn('items', 'isbn', 'isbn VARCHAR(255)');
-  await ensureColumn('languages', 'isActive', 'isActive TINYINT(1) NOT NULL DEFAULT 1');
-  await ensureColumn('items', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
-  await ensureColumn('purchases', 'totalpurchaseamount', 'totalpurchaseamount DECIMAL(12,2) NOT NULL DEFAULT 0.00');
-  await ensureColumn('purchases', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
-  await ensureColumn('sales', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
-  await ensureColumn('sales', 'salesPrice', 'salesPrice DECIMAL(12,2) NOT NULL DEFAULT 0.00');
-  await ensureColumn('purchases', 'userId', 'userId INT, ADD CONSTRAINT fk_purchases_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL');
-  await ensureColumn('sales', 'userId', 'userId INT, ADD CONSTRAINT fk_sales_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL');
-  await dropColumnIfExists('sales', 'amount');
-  await dropColumnIfExists('sales', 'customerName');
-  await dropColumnIfExists('sales', 'customerPhone');
-
-  const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', ['admin']);
-  if (userRows.length === 0) {
-    try {
-      const bcrypt = await import('bcrypt');
-      const hashedPassword = await bcrypt.hash('admin', 10);
-      await connection.query('INSERT INTO users (username, password, userType) VALUES (?, ?, ?)', ['admin', hashedPassword, 'super_admin']);
-      console.log('Default super_admin account created (admin/admin)');
-    } catch (err) {
-      console.error('Failed to create default admin account:', err);
-    }
-  }
-
-  await connection.end();
-
-  return mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: dbName,
-    // enable multi-statement execution for pool as well
-    multipleStatements: true,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-  });
-};
-
-export default initializeDatabase;
+export default pool;

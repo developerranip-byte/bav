@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import initializeDatabase from './db.js';
+import pool from './db.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import languageRoutes from './routes/languageRoutes.js';
 import itemRoutes from './routes/itemRoutes.js';
@@ -20,7 +20,6 @@ const PORT = process.env.PORT ?? 5000;
 app.use(cors());
 app.use(express.json());
 
-const pool = await initializeDatabase();
 app.locals.pool = pool;
 
 app.use('/api/auth', authRoutes);
@@ -50,6 +49,10 @@ app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Backend running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Backend running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

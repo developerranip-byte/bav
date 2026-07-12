@@ -9,7 +9,8 @@
     "seed": "node seed.js",
     "seed:users": "node seedUsers.js",
     "seed:large": "node seedLarge.js",
-    "truncate": "node truncate.js"
+    "truncate": "node truncate.js",
+    "db:init": "node initDB.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
