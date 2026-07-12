@@ -2,6 +2,47 @@ import xlsx from 'xlsx';
 
 export const getItems = async (req, res) => {
   const pool = req.app.locals.pool;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+
+  const { categoryId, languageId, search, sortBy, sortOrder } = req.query;
+
+  const conditions = [];
+  const params = [];
+
+  if (categoryId) {
+    conditions.push('items.categoryId = ?');
+    params.push(categoryId);
+  }
+  if (languageId) {
+    conditions.push('items.languageId = ?');
+    params.push(languageId);
+  }
+  if (search && search.trim() !== '') {
+    const like = `%${search.trim()}%`;
+    conditions.push('(items.name LIKE ? OR items.isbn LIKE ?)');
+    params.push(like, like);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const allowedSortColumns = ['name', 'categoryName', 'languageName', 'isbn', 'isActive'];
+  let orderByClause = 'ORDER BY i.id DESC';
+  if (sortBy && allowedSortColumns.includes(sortBy)) {
+    const direction = sortOrder === 'asc' ? 'ASC' : 'DESC';
+    if (sortBy === 'categoryName') {
+      orderByClause = `ORDER BY c.name ${direction}, i.id DESC`;
+    } else if (sortBy === 'languageName') {
+      orderByClause = `ORDER BY l.name ${direction}, i.id DESC`;
+    } else {
+      orderByClause = `ORDER BY i.${sortBy} ${direction}, i.id DESC`;
+    }
+  }
+
+  const [countRows] = await pool.query(`SELECT COUNT(*) as total FROM items ${whereClause}`, params);
+  const total = countRows[0].total;
+
   const [rows] = await pool.query(
     `SELECT i.id, i.name, i.categoryId, i.languageId, i.isbn, i.openingQty, i.isActive,
             c.name AS categoryName, l.name AS languageName, l.code AS languageCode,
@@ -15,9 +56,18 @@ export const getItems = async (req, res) => {
       FROM items i
       LEFT JOIN categories c ON i.categoryId = c.id
       LEFT JOIN languages l ON i.languageId = l.id
-      ORDER BY i.id DESC`
+      ${whereClause.replace(/items\./g, 'i.')}
+      ${orderByClause}
+      LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
   );
-  res.json(rows);
+  
+  res.json({
+    data: rows,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit)
+  });
 };
 
 export const searchItems = async (req, res) => {

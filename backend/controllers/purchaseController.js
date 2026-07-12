@@ -2,6 +2,46 @@ import xlsx from 'xlsx';
 
 export const getPurchases = async (req, res) => {
   const pool = req.app.locals.pool;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+
+  const { itemId, startDate, endDate, sortBy, sortOrder } = req.query;
+
+  const conditions = [];
+  const params = [];
+
+  if (itemId) {
+    conditions.push('p.itemId = ?');
+    params.push(itemId);
+  }
+  if (startDate) {
+    conditions.push('p.purchaseDate >= ?');
+    params.push(startDate);
+  }
+  if (endDate) {
+    conditions.push('p.purchaseDate <= ?');
+    params.push(endDate);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const allowedSortColumns = ['itemName', 'quantity', 'amount', 'purchaseDate', 'addedBy'];
+  let orderByClause = 'ORDER BY p.purchaseDate DESC, p.id DESC';
+  if (sortBy && allowedSortColumns.includes(sortBy)) {
+    const direction = sortOrder === 'asc' ? 'ASC' : 'DESC';
+    if (sortBy === 'itemName') {
+      orderByClause = `ORDER BY i.name ${direction}, p.id DESC`;
+    } else if (sortBy === 'addedBy') {
+      orderByClause = `ORDER BY u.username ${direction}, p.id DESC`;
+    } else {
+      orderByClause = `ORDER BY p.${sortBy} ${direction}, p.id DESC`;
+    }
+  }
+
+  const [countRows] = await pool.query(`SELECT COUNT(*) as total FROM purchases p ${whereClause}`, params);
+  const total = countRows[0].total;
+
   const [rows] = await pool.query(
     `SELECT p.id, p.purchaseDate, p.itemId, p.quantity, p.amount,
             (p.quantity * p.amount) AS totalAmount,
@@ -12,9 +52,18 @@ export const getPurchases = async (req, res) => {
       LEFT JOIN categories c ON i.categoryId = c.id
       LEFT JOIN languages l ON i.languageId = l.id
       LEFT JOIN users u ON p.userId = u.id
-      ORDER BY p.purchaseDate DESC, p.id DESC`
+      ${whereClause}
+      ${orderByClause}
+      LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
   );
-  res.json(rows);
+  
+  res.json({
+    data: rows,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit)
+  });
 };
 
 export const createPurchase = async (req, res) => {

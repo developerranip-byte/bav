@@ -1,5 +1,55 @@
 export const getItemReports = async (req, res) => {
   const pool = req.app.locals.pool;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+
+  const { categoryId, languageId, search, sortBy, sortOrder } = req.query;
+
+  const conditions = [];
+  const params = [];
+
+  if (categoryId) {
+    conditions.push('items.categoryId = ?');
+    params.push(categoryId);
+  }
+  if (languageId) {
+    conditions.push('items.languageId = ?');
+    params.push(languageId);
+  }
+  if (search && search.trim() !== '') {
+    const like = `%${search.trim()}%`;
+    conditions.push('items.name LIKE ?');
+    params.push(like);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const allowedSortColumns = [
+    'name', 'categoryName', 'languageName', 'openingQty', 
+    'totalPurchased', 'totalSold', 'currentQuantity', 
+    'lastPurchaseDate', 'lastSalesDate'
+  ];
+  
+  let orderByClause = 'ORDER BY i.id DESC';
+  if (sortBy && allowedSortColumns.includes(sortBy)) {
+    const direction = sortOrder === 'asc' ? 'ASC' : 'DESC';
+    if (sortBy === 'name' || sortBy === 'openingQty') {
+      orderByClause = `ORDER BY i.${sortBy} ${direction}, i.id DESC`;
+    } else if (sortBy === 'categoryName') {
+      orderByClause = `ORDER BY c.name ${direction}, i.id DESC`;
+    } else if (sortBy === 'languageName') {
+      orderByClause = `ORDER BY l.name ${direction}, i.id DESC`;
+    } else {
+      // These are calculated or aliased columns in the SELECT clause.
+      // We can just use the alias name directly in ORDER BY.
+      orderByClause = `ORDER BY ${sortBy} ${direction}, i.id DESC`;
+    }
+  }
+
+  const [countRows] = await pool.query(`SELECT COUNT(*) as total FROM items ${whereClause}`, params);
+  const total = countRows[0].total;
+
   const [rows] = await pool.query(
     `SELECT i.id,
             i.name,
@@ -24,9 +74,18 @@ export const getItemReports = async (req, res) => {
         FROM sales
         GROUP BY itemId
       ) s ON s.itemId = i.id
-      ORDER BY i.id DESC`
+      ${whereClause.replace(/items\./g, 'i.')}
+      ${orderByClause}
+      LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
   );
-  res.json(rows);
+  
+  res.json({
+    data: rows,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit)
+  });
 };
 
 export const getItemPurchaseHistory = async (req, res) => {

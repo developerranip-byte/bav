@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
 
 function ItemsMaster({ setToast }) {
-  const [items, setItems] = useState([]);
+  const [itemsData, setItemsData] = useState({ data: [], page: 1, totalPages: 1 });
   const [categories, setCategories] = useState([]);
   const [languages, setLanguages] = useState([]);
   const [itemForm, setItemForm] = useState({
@@ -13,6 +13,8 @@ function ItemsMaster({ setToast }) {
     isActive: true,
   });
   const [editingId, setEditingId] = useState(null);
+  const [filters, setFilters] = useState({ search: '', categoryId: '', languageId: '' });
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [errors, setErrors] = useState({});
 
   const token = localStorage.getItem('bav_auth_token');
@@ -26,7 +28,7 @@ function ItemsMaster({ setToast }) {
         fetch(`${API_BASE}/languages`, { headers: headers() }),
       ]);
 
-      if (itemRes.ok) setItems(await itemRes.json());
+      if (itemRes.ok) setItemsData(await itemRes.json());
       if (catRes.ok) {
         const cats = await catRes.json();
         setCategories(cats);
@@ -45,6 +47,41 @@ function ItemsMaster({ setToast }) {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const fetchItems = async (page = 1) => {
+    try {
+      const queryParams = new URLSearchParams({ page });
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.categoryId) queryParams.append('categoryId', filters.categoryId);
+      if (filters.languageId) queryParams.append('languageId', filters.languageId);
+      if (sortConfig.key) {
+        queryParams.append('sortBy', sortConfig.key);
+        queryParams.append('sortOrder', sortConfig.direction);
+      }
+
+      const res = await fetch(`${API_BASE}/items?${queryParams.toString()}`, { headers: headers() });
+      if (res.ok) setItemsData(await res.json());
+    } catch (err) {
+      console.error('Failed to fetch items:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchItems(itemsData.page);
+  }, [sortConfig]);
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -78,7 +115,7 @@ function ItemsMaster({ setToast }) {
           isActive: true,
         });
         setEditingId(null);
-        fetchData();
+        fetchItems(itemsData.page);
       } else {
         const error = await res.json();
         setToast({ type: 'error', message: error.message || res.statusText });
@@ -97,7 +134,7 @@ function ItemsMaster({ setToast }) {
       });
       if (res.ok || res.status === 204) {
         setToast({ type: 'success', message: 'Item deleted' });
-        fetchData();
+        fetchItems(itemsData.page);
       } else {
         const error = await res.json();
         setToast({ type: 'error', message: error.message || res.statusText });
@@ -150,7 +187,7 @@ function ItemsMaster({ setToast }) {
       const data = await res.json();
       if (res.ok) {
         setToast({ type: 'success', message: data.message });
-        fetchData();
+        fetchItems(1);
       } else {
         setToast({ type: 'error', message: data.message || 'Import failed' });
       }
@@ -261,34 +298,85 @@ function ItemsMaster({ setToast }) {
 
         <div className="card">
           <h3>Item List</h3>
-          <ul className="list">
-            {items.map((item) => (
-              <li key={item.id}>
-                <div className="list-row">
-                  <strong>{item.name}</strong>
-                  <span className={item.isActive ? 'status-pill active' : 'status-pill'}>
-                    {item.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <p>Category: {findCategoryName(item.categoryId)}</p>
-                <p>Language: {findLanguageName(item.languageId)}</p>
-                <p>ISBN: {item.isbn || '-'}</p>
-                <div style={{ marginTop: 8 }}>
-                  <button onClick={() => {
-                    setEditingId(item.id);
-                    setItemForm({
-                      name: item.name,
-                      categoryId: item.categoryId || categories[0]?.id || '',
-                      languageId: item.languageId || languages[0]?.id || '',
-                      isbn: item.isbn || '',
-                      isActive: !!item.isActive,
-                    });
-                  }}>Edit</button>
-                  <button onClick={() => handleDelete(item.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <label className="field-label">Search (Name or ISBN)</label>
+              <input placeholder="Search..." value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
+            </div>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+              <label className="field-label">Category</label>
+              <select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}>
+                <option value="">All Categories</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+              <label className="field-label">Language</label>
+              <select value={filters.languageId} onChange={(e) => setFilters({ ...filters, languageId: e.target.value })}>
+                <option value="">All Languages</option>
+                {languages.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => fetchItems(1)} style={{ padding: '10px 16px' }}>Filter</button>
+              <button onClick={() => { setFilters({ search: '', categoryId: '', languageId: '' }); setTimeout(() => fetchItems(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
+            </div>
+          </div>
+          <table className="data-table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Name{renderSortIcon('name')}</th>
+                <th onClick={() => handleSort('categoryName')} style={{ cursor: 'pointer' }}>Category{renderSortIcon('categoryName')}</th>
+                <th onClick={() => handleSort('languageName')} style={{ cursor: 'pointer' }}>Language{renderSortIcon('languageName')}</th>
+                <th onClick={() => handleSort('isbn')} style={{ cursor: 'pointer' }}>ISBN{renderSortIcon('isbn')}</th>
+                <th onClick={() => handleSort('isActive')} style={{ cursor: 'pointer' }}>Status{renderSortIcon('isActive')}</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {itemsData.data.map((item) => (
+                <tr key={item.id}>
+                  <td><strong>{item.name}</strong></td>
+                  <td>{findCategoryName(item.categoryId)}</td>
+                  <td>{findLanguageName(item.languageId)}</td>
+                  <td>{item.isbn || '-'}</td>
+                  <td>
+                    <span className={item.isActive ? 'status-pill active' : 'status-pill'}>
+                      {item.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td>
+                    <button onClick={() => {
+                      setEditingId(item.id);
+                      setItemForm({
+                        name: item.name,
+                        categoryId: item.categoryId || categories[0]?.id || '',
+                        languageId: item.languageId || languages[0]?.id || '',
+                        isbn: item.isbn || '',
+                        isActive: !!item.isActive,
+                      });
+                    }} style={{ marginRight: 8 }}>Edit</button>
+                    <button onClick={() => handleDelete(item.id)} className="danger">Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
+            <button
+              disabled={itemsData.page <= 1}
+              onClick={() => fetchItems(itemsData.page - 1)}
+            >
+              Previous
+            </button>
+            <span>Page {itemsData.page} of {itemsData.totalPages}</span>
+            <button
+              disabled={itemsData.page >= itemsData.totalPages}
+              onClick={() => fetchItems(itemsData.page + 1)}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </section>
     </section>

@@ -123,26 +123,36 @@ function CategoryMaster({ authHeaders, setToast }) {
 
         <div className="card">
           <h3>Available Categories</h3>
-          <ul className="list">
-            {categories.map((category) => (
-              <li key={category.id}>
-                <div className="list-row">
-                  <strong>{category.name}</strong>
-                  <span className={category.isActive ? 'status-pill active' : 'status-pill'}>
-                    {category.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <p>{category.description}</p>
-                <div style={{ marginTop: 8 }}>
-                  <button onClick={() => {
-                    setEditingId(category.id);
-                    setCategoryForm({ name: category.name, description: category.description || '', isActive: !!category.isActive });
-                  }}>Edit</button>
-                  <button onClick={() => handleDelete(category.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <table className="data-table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map((category) => (
+                <tr key={category.id}>
+                  <td>{category.name}</td>
+                  <td>{category.description || '-'}</td>
+                  <td>
+                    <span className={category.isActive ? 'status-pill active' : 'status-pill'}>
+                      {category.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td>
+                    <button onClick={() => {
+                      setEditingId(category.id);
+                      setCategoryForm({ name: category.name, description: category.description || '', isActive: !!category.isActive });
+                    }} style={{ marginRight: 8 }}>Edit</button>
+                    <button onClick={() => handleDelete(category.id)} className="danger">Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
     </section>

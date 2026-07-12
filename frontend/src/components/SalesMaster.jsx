@@ -4,7 +4,11 @@ import { CURRENCY_SYMBOL } from '../utils/config';
 
 function SalesMaster({ setToast }) {
   const [items, setItems] = useState([]);
-  const [sales, setSales] = useState([]);
+  const [salesData, setSalesData] = useState({ data: [], page: 1, totalPages: 1 });
+  const [itemSearch, setItemSearch] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [filters, setFilters] = useState({ itemId: '', startDate: '', endDate: '' });
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [saleForm, setSaleForm] = useState({
     itemId: '',
     quantity: 1,
@@ -16,7 +20,7 @@ function SalesMaster({ setToast }) {
   const token = localStorage.getItem('bav_auth_token');
   const headers = () => createAuthHeaders(token);
 
-  const itemOptions = useMemo(() => items, [items]);
+  const activeItems = useMemo(() => (items.data || items).filter((item) => item.isActive), [items]);
 
   const fetchData = async () => {
     try {
@@ -28,9 +32,9 @@ function SalesMaster({ setToast }) {
       if (itemRes.ok) {
         const itemsData = await itemRes.json();
         setItems(itemsData);
-        setSaleForm((prev) => ({ ...prev, itemId: itemsData[0]?.id || '' }));
+        setSaleForm((prev) => ({ ...prev, itemId: itemsData.data?.[0]?.id || '' }));
       }
-      if (salesRes.ok) setSales(await salesRes.json());
+      if (salesRes.ok) setSalesData(await salesRes.json());
     } catch (err) {
       console.error('Failed to fetch data:', err);
     }
@@ -40,13 +44,80 @@ function SalesMaster({ setToast }) {
     fetchData();
   }, []);
 
+  const fetchSales = async (page = 1) => {
+    try {
+      const queryParams = new URLSearchParams({ page });
+      if (filters.itemId) queryParams.append('itemId', filters.itemId);
+      if (filters.startDate) queryParams.append('startDate', filters.startDate);
+      if (filters.endDate) queryParams.append('endDate', filters.endDate);
+      if (sortConfig.key) {
+        queryParams.append('sortBy', sortConfig.key);
+        queryParams.append('sortOrder', sortConfig.direction);
+      }
+
+      const res = await fetch(`${API_BASE}/sales?${queryParams.toString()}`, { headers: headers() });
+      if (res.ok) setSalesData(await res.json());
+    } catch (err) {
+      console.error('Failed to fetch sales:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSales(salesData.page);
+  }, [sortConfig]);
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
+
+  useEffect(() => {
+    const query = itemSearch.trim();
+    if (!query) {
+      setSuggestions([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/items/search?q=${encodeURIComponent(query)}`, {
+          signal: controller.signal,
+          headers: headers(),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSuggestions(Array.isArray(data) ? data : []);
+        } else {
+          setSuggestions([]);
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') setSuggestions([]);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [itemSearch]);
+
   // Automatically calculate salesPrice based on selected item's last purchase price and quantity
   useEffect(() => {
-    const selectedItem = items.find((item) => item.id === Number(saleForm.itemId));
+    const itemsArray = items.data || items;
+    const selectedItem = itemsArray.find((item) => item.id === Number(saleForm.itemId)) || suggestions.find(s => s.id === Number(saleForm.itemId));
     const purchasePrice = selectedItem?.lastPurchasePrice || 0;
     const calculatedPrice = Number((purchasePrice * (saleForm.quantity || 0)).toFixed(2));
     setSaleForm((prev) => ({ ...prev, salesPrice: calculatedPrice }));
-  }, [saleForm.itemId, saleForm.quantity, items]);
+  }, [saleForm.itemId, saleForm.quantity, items, suggestions]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,7 +153,9 @@ function SalesMaster({ setToast }) {
           salesDate: new Date().toISOString().slice(0, 10),
           salesPrice: 0,
         });
-        fetchData();
+        setItemSearch('');
+        setSuggestions([]);
+        fetchSales(1);
       } else {
         const data = await res.json();
         const errorMessage = data.message || res.statusText;
@@ -94,7 +167,7 @@ function SalesMaster({ setToast }) {
     }
   };
 
-  const findItemName = (id) => items.find((item) => item.id === Number(id))?.name || '-';
+
 
   return (
     <section className="page-card">
@@ -110,19 +183,45 @@ function SalesMaster({ setToast }) {
         <div className="card">
           <h3>Add Sale</h3>
           <form onSubmit={handleSubmit}>
-            <label className="field-label">Item</label>
+            <label className="field-label">Search item by name or ISBN</label>
+            <input
+              placeholder="Type item name or ISBN"
+              value={itemSearch}
+              onChange={(e) => setItemSearch(e.target.value)}
+            />
             <select
               value={saleForm.itemId}
               onChange={(e) => setSaleForm({ ...saleForm, itemId: Number(e.target.value) })}
             >
               <option value="">Select item</option>
-              {itemOptions.filter((item) => item.isActive).map((item) => (
+              {suggestions.length > 0 ? suggestions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name}
+                  {item.name} {item.isbn ? `(${item.isbn})` : ''}
+                </option>
+              )) : activeItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} {item.isbn ? `(${item.isbn})` : ''}
                 </option>
               ))}
             </select>
             {errors.itemId && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.itemId}</div>}
+
+            {itemSearch.trim() && suggestions.length > 0 && (
+              <div style={{ marginTop: 8, border: '1px solid #ddd', padding: 8, borderRadius: 4, maxHeight: 160, overflowY: 'auto' }}>
+                {suggestions.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{ cursor: 'pointer', padding: '4px 0' }}
+                    onClick={() => {
+                      setSaleForm({ ...saleForm, itemId: item.id });
+                      setItemSearch(item.name || item.isbn || '');
+                    }}
+                  >
+                    {item.name} {item.isbn ? `(${item.isbn})` : ''}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <label className="field-label">Sales Quantity</label>
             <input
@@ -158,21 +257,44 @@ function SalesMaster({ setToast }) {
 
         <div className="card">
           <h3>Sales History</h3>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <label className="field-label">Filter by Item</label>
+              <select value={filters.itemId} onChange={(e) => setFilters({ ...filters, itemId: e.target.value })}>
+                <option value="">All Items</option>
+                {activeItems.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+              <label className="field-label">Start Date</label>
+              <input type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
+            </div>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+              <label className="field-label">End Date</label>
+              <input type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => fetchSales(1)} style={{ padding: '10px 16px' }}>Filter</button>
+              <button onClick={() => { setFilters({ itemId: '', startDate: '', endDate: '' }); setTimeout(() => fetchSales(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
+            </div>
+          </div>
           <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Quantity</th>
-                <th>Total Amount</th>
-                <th>Date</th>
-                <th>Added By</th>
+                <th onClick={() => handleSort('itemName')} style={{ cursor: 'pointer' }}>Item{renderSortIcon('itemName')}</th>
+                <th onClick={() => handleSort('quantity')} style={{ cursor: 'pointer' }}>Quantity{renderSortIcon('quantity')}</th>
+                <th onClick={() => handleSort('salesPrice')} style={{ cursor: 'pointer' }}>Total Amount{renderSortIcon('salesPrice')}</th>
+                <th onClick={() => handleSort('salesDate')} style={{ cursor: 'pointer' }}>Date{renderSortIcon('salesDate')}</th>
+                <th onClick={() => handleSort('addedBy')} style={{ cursor: 'pointer' }}>Added By{renderSortIcon('addedBy')}</th>
               </tr>
             </thead>
             <tbody>
-              {sales.length > 0 ? (
-                sales.map((sale) => (
+              {salesData.data.length > 0 ? (
+                salesData.data.map((sale) => (
                   <tr key={sale.id}>
-                    <td>{findItemName(sale.itemId)}</td>
+                    <td>{sale.itemName || '-'}</td>
                     <td>{sale.quantity}</td>
                     <td>{CURRENCY_SYMBOL}{Number(sale?.totalAmount).toFixed(2)}</td>
                     <td>{new Date(sale.salesDate).toLocaleDateString()}</td>
@@ -188,6 +310,21 @@ function SalesMaster({ setToast }) {
               )}
             </tbody>
           </table>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
+            <button
+              disabled={salesData.page <= 1}
+              onClick={() => fetchSales(salesData.page - 1)}
+            >
+              Previous
+            </button>
+            <span>Page {salesData.page} of {salesData.totalPages}</span>
+            <button
+              disabled={salesData.page >= salesData.totalPages}
+              onClick={() => fetchSales(salesData.page + 1)}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </section>
     </section>

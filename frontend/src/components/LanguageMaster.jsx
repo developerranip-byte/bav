@@ -127,24 +127,36 @@ function LanguageMaster({ setToast }) {
 
         <div className="card">
           <h3>Available Languages</h3>
-          <ul className="list">
-            {languages.map((language) => (
-              <li key={language.id}>
-                <strong>{language.name}</strong>
-                <span>({language.code})</span>
-                <span className={language.isActive ? 'status-pill active' : 'status-pill'} style={{ marginLeft: 8 }}>
-                  {language.isActive ? 'Active' : 'Inactive'}
-                </span>
-                <div style={{ marginTop: 8 }}>
-                  <button onClick={() => {
-                    setEditingId(language.id);
-                    setLanguageForm({ name: language.name, code: language.code, isActive: !!language.isActive });
-                  }}>Edit</button>
-                  <button onClick={() => handleDelete(language.id)} className="danger" style={{ marginLeft: 8 }}>Delete</button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <table className="data-table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Code</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {languages.map((language) => (
+                <tr key={language.id}>
+                  <td>{language.name}</td>
+                  <td>{language.code}</td>
+                  <td>
+                    <span className={language.isActive ? 'status-pill active' : 'status-pill'}>
+                      {language.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td>
+                    <button onClick={() => {
+                      setEditingId(language.id);
+                      setLanguageForm({ name: language.name, code: language.code, isActive: !!language.isActive });
+                    }} style={{ marginRight: 8 }}>Edit</button>
+                    <button onClick={() => handleDelete(language.id)} className="danger">Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
     </section>

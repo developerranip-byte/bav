@@ -4,7 +4,7 @@ import { CURRENCY_SYMBOL } from '../utils/config';
 
 function PurchaseMaster({ setToast }) {
   const [items, setItems] = useState([]);
-  const [purchases, setPurchases] = useState([]);
+  const [purchasesData, setPurchasesData] = useState({ data: [], page: 1, totalPages: 1 });
   const [purchaseForm, setPurchaseForm] = useState({
     itemId: '',
     quantity: 1,
@@ -13,12 +13,14 @@ function PurchaseMaster({ setToast }) {
   });
   const [itemSearch, setItemSearch] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [filters, setFilters] = useState({ itemId: '', startDate: '', endDate: '' });
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [errors, setErrors] = useState({});
 
   const token = localStorage.getItem('bav_auth_token');
   const headers = () => createAuthHeaders(token);
 
-  const activeItems = useMemo(() => items.filter((item) => item.isActive), [items]);
+  const activeItems = useMemo(() => (items.data || items).filter((item) => item.isActive), [items]);
 
   const fetchData = async () => {
     try {
@@ -30,9 +32,9 @@ function PurchaseMaster({ setToast }) {
       if (itemRes.ok) {
         const itemsData = await itemRes.json();
         setItems(itemsData);
-        setPurchaseForm((prev) => ({ ...prev, itemId: itemsData[0]?.id || '' }));
+        setPurchaseForm((prev) => ({ ...prev, itemId: itemsData.data?.[0]?.id || '' }));
       }
-      if (purchaseRes.ok) setPurchases(await purchaseRes.json());
+      if (purchaseRes.ok) setPurchasesData(await purchaseRes.json());
     } catch (err) {
       console.error('Failed to fetch data:', err);
     }
@@ -41,6 +43,41 @@ function PurchaseMaster({ setToast }) {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const fetchPurchases = async (page = 1) => {
+    try {
+      const queryParams = new URLSearchParams({ page });
+      if (filters.itemId) queryParams.append('itemId', filters.itemId);
+      if (filters.startDate) queryParams.append('startDate', filters.startDate);
+      if (filters.endDate) queryParams.append('endDate', filters.endDate);
+      if (sortConfig.key) {
+        queryParams.append('sortBy', sortConfig.key);
+        queryParams.append('sortOrder', sortConfig.direction);
+      }
+
+      const res = await fetch(`${API_BASE}/purchases?${queryParams.toString()}`, { headers: headers() });
+      if (res.ok) setPurchasesData(await res.json());
+    } catch (err) {
+      console.error('Failed to fetch purchases:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPurchases(purchasesData.page);
+  }, [sortConfig]);
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
 
   useEffect(() => {
     const query = itemSearch.trim();
@@ -107,7 +144,7 @@ function PurchaseMaster({ setToast }) {
         });
         setItemSearch('');
         setSuggestions([]);
-        fetchData();
+        fetchPurchases(1);
       } else {
         const error = await res.json();
         setToast({ type: 'error', message: error.message || res.statusText });
@@ -117,7 +154,7 @@ function PurchaseMaster({ setToast }) {
     }
   };
 
-  const findItemName = (itemId) => items.find((item) => item.id === Number(itemId))?.name || '-';
+
 
   const handleExport = async () => {
     try {
@@ -159,7 +196,7 @@ function PurchaseMaster({ setToast }) {
       const data = await res.json();
       if (res.ok) {
         setToast({ type: 'success', message: data.message });
-        fetchData();
+        fetchPurchases(1);
       } else {
         setToast({ type: 'error', message: data.message || 'Import failed' });
       }
@@ -271,21 +308,44 @@ function PurchaseMaster({ setToast }) {
 
         <div className="card">
           <h3>Stock History</h3>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <label className="field-label">Filter by Item</label>
+              <select value={filters.itemId} onChange={(e) => setFilters({ ...filters, itemId: e.target.value })}>
+                <option value="">All Items</option>
+                {activeItems.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+              <label className="field-label">Start Date</label>
+              <input type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
+            </div>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+              <label className="field-label">End Date</label>
+              <input type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => fetchPurchases(1)} style={{ padding: '10px 16px' }}>Filter</button>
+              <button onClick={() => { setFilters({ itemId: '', startDate: '', endDate: '' }); setTimeout(() => fetchPurchases(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
+            </div>
+          </div>
           <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Date</th>
-                <th>Added By</th>
+                <th onClick={() => handleSort('itemName')} style={{ cursor: 'pointer' }}>Item{renderSortIcon('itemName')}</th>
+                <th onClick={() => handleSort('quantity')} style={{ cursor: 'pointer' }}>Quantity{renderSortIcon('quantity')}</th>
+                <th onClick={() => handleSort('amount')} style={{ cursor: 'pointer' }}>Price{renderSortIcon('amount')}</th>
+                <th onClick={() => handleSort('purchaseDate')} style={{ cursor: 'pointer' }}>Date{renderSortIcon('purchaseDate')}</th>
+                <th onClick={() => handleSort('addedBy')} style={{ cursor: 'pointer' }}>Added By{renderSortIcon('addedBy')}</th>
               </tr>
             </thead>
             <tbody>
-              {purchases.length > 0 ? (
-                purchases.map((purchase) => (
+              {purchasesData.data.length > 0 ? (
+                purchasesData.data.map((purchase) => (
                   <tr key={purchase.id}>
-                    <td>{findItemName(purchase.itemId)}</td>
+                    <td>{purchase.itemName || '-'}</td>
                     <td>{purchase.quantity}</td>
                     <td>{CURRENCY_SYMBOL}{Number(purchase.amount).toFixed(2)}</td>
                     <td>{new Date(purchase.purchaseDate).toLocaleDateString()}</td>
@@ -301,6 +361,21 @@ function PurchaseMaster({ setToast }) {
               )}
             </tbody>
           </table>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
+            <button
+              disabled={purchasesData.page <= 1}
+              onClick={() => fetchPurchases(purchasesData.page - 1)}
+            >
+              Previous
+            </button>
+            <span>Page {purchasesData.page} of {purchasesData.totalPages}</span>
+            <button
+              disabled={purchasesData.page >= purchasesData.totalPages}
+              onClick={() => fetchPurchases(purchasesData.page + 1)}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </section>
     </section>
