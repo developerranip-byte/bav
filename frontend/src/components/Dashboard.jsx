@@ -53,7 +53,7 @@ function Dashboard({ authHeaders }) {
       <section className="dashboard-grid" style={{ marginTop: 20 }}>
         <article className="stats-card blue">
           <h3>Today's Sales</h3>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div>
               <strong>{todayStats.soldQty}</strong>
               <span style={{ display: 'block' }}>Qty Sold</span>
@@ -66,7 +66,7 @@ function Dashboard({ authHeaders }) {
         </article>
         <article className="stats-card green">
           <h3>Today's Stock In</h3>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div>
               <strong>{todayStats.purchasedQty}</strong>
               <span style={{ display: 'block' }}>Qty Stocked</span>

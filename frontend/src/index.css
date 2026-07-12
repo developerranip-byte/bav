@@ -7,6 +7,8 @@
 body {
   margin: 0;
   background: linear-gradient(135deg, #fef2f2, #f8fafc);
+  overflow-x: hidden;
+  width: 100%;
 }
 
 * {
@@ -17,6 +19,8 @@ body {
   display: flex;
   min-height: 100vh;
   background: #f8fafc;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .sidebar {
@@ -306,17 +310,13 @@ textarea {
 
   nav {
     display: flex;
-    flex-direction: row;
-    overflow-x: auto;
+    flex-direction: column;
     gap: 8px;
-    padding-bottom: 8px;
-    -webkit-overflow-scrolling: touch;
   }
 
   .menu-btn {
-    width: auto;
-    flex-shrink: 0;
-    text-align: center;
+    width: 100%;
+    text-align: left;
   }
 
   .list-row {
@@ -384,6 +384,7 @@ textarea {
     padding: 12px;
   }
 }
+
 .icon-btn {
   background: transparent;
   border: none;
@@ -396,13 +397,16 @@ textarea {
   justify-content: center;
   transition: all 0.2s;
 }
+
 .icon-btn:hover {
   background: #f1f5f9;
   color: #0f172a;
 }
+
 .icon-btn.danger {
   color: #ef4444;
 }
+
 .icon-btn.danger:hover {
   background: #fef2f2;
   color: #dc2626;

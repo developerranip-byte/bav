@@ -236,6 +236,7 @@ function SalesMaster({ setToast }) {
             <input
               type="date"
               value={saleForm.salesDate}
+              max={new Date().toISOString().split('T')[0]}
               onChange={(e) => setSaleForm({ ...saleForm, salesDate: e.target.value })}
             />
             {errors.salesDate && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.salesDate}</div>}
@@ -269,11 +270,11 @@ function SalesMaster({ setToast }) {
             </div>
             <div style={{ flex: 1, minWidth: '150px' }}>
               <label className="field-label">Start Date</label>
-              <input type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
+              <input type="date" value={filters.startDate} max={new Date().toISOString().split('T')[0]} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
             </div>
             <div style={{ flex: 1, minWidth: '150px' }}>
               <label className="field-label">End Date</label>
-              <input type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
+              <input type="date" value={filters.endDate} max={new Date().toISOString().split('T')[0]} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => fetchSales(1)} style={{ padding: '10px 16px' }}>Filter</button>
