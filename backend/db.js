@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS purchases (
   itemId INT NOT NULL,
   quantity INT NOT NULL,
   amount DECIMAL(12,2) NOT NULL,
+  totalpurchaseamount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   purchaseDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS sales (
   id INT AUTO_INCREMENT PRIMARY KEY,
   itemId INT NOT NULL,
   quantity INT NOT NULL DEFAULT 1,
+  salesPrice DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   salesDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE
@@ -87,8 +89,10 @@ const initializeDatabase = async () => {
   await ensureColumn('items', 'isbn', 'isbn VARCHAR(255)');
   await ensureColumn('languages', 'isActive', 'isActive TINYINT(1) NOT NULL DEFAULT 1');
   await ensureColumn('items', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
+  await ensureColumn('purchases', 'totalpurchaseamount', 'totalpurchaseamount DECIMAL(12,2) NOT NULL DEFAULT 0.00');
   await ensureColumn('purchases', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
   await ensureColumn('sales', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
+  await ensureColumn('sales', 'salesPrice', 'salesPrice DECIMAL(12,2) NOT NULL DEFAULT 0.00');
   await dropColumnIfExists('sales', 'amount');
   await dropColumnIfExists('sales', 'customerName');
   await dropColumnIfExists('sales', 'customerPhone');

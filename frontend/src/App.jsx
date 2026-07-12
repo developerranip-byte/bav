@@ -89,9 +89,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="logout-header">
-        <button className="logout-btn" onClick={handleLogout}>Logout</button>
-      </header>
+
       {toast && (
         <div
           style={{
@@ -138,11 +136,12 @@ function App() {
       </aside>
 
       <main className="main-content">
-        <header className="topbar">
+        <header className="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Purchase Master' : activeMenu === 'sales' ? 'Sales Master' : 'Report Master'}</h1>
             <p>Organize your library with a modern control panel.</p>
           </div>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </header>
 
         <Routes>

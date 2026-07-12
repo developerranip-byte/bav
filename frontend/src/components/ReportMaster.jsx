@@ -108,7 +108,11 @@ function ReportMaster({ setToast }) {
                 {history.rows.map((row) => (
                   <li key={row.id}>
                     <div className="list-row">
-                      <strong>{history.type === 'purchase' ? `Purchased Qty ${row.quantity}` : `Sold Qty ${row.quantity}`}</strong>
+                      <strong>
+                        {history.type === 'purchase'
+                          ? `Purchased Qty: ${row.quantity} - Price: ₹${Number(row?.amount).toFixed(2)}`
+                          : `Sold Qty: ${row.quantity} - Sales Price: ₹${(Number(row.quantity) * Number(row.salesPrice)).toFixed(2)}`}
+                      </strong>
                       <span>{new Date(history.type === 'purchase' ? row.purchaseDate : row.salesDate).toLocaleDateString()}</span>
                     </div>
                   </li>

@@ -2,7 +2,14 @@ export const getItems = async (req, res) => {
   const pool = req.app.locals.pool;
   const [rows] = await pool.query(
     `SELECT i.id, i.name, i.categoryId, i.languageId, i.isbn, i.openingQty, i.isActive,
-            c.name AS categoryName, l.name AS languageName, l.code AS languageCode
+            c.name AS categoryName, l.name AS languageName, l.code AS languageCode,
+            COALESCE((
+              SELECT p.amount
+              FROM purchases p
+              WHERE p.itemId = i.id
+              ORDER BY p.purchaseDate DESC, p.id DESC
+              LIMIT 1
+            ), 0.00) AS lastPurchasePrice
       FROM items i
       LEFT JOIN categories c ON i.categoryId = c.id
       LEFT JOIN languages l ON i.languageId = l.id

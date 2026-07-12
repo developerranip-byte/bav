@@ -39,13 +39,21 @@ function SalesMaster({ setToast }) {
     fetchData();
   }, []);
 
+  // Automatically calculate salesPrice based on selected item's last purchase price and quantity
+  useEffect(() => {
+    const selectedItem = items.find((item) => item.id === Number(saleForm.itemId));
+    const purchasePrice = selectedItem?.lastPurchasePrice || 0;
+    const calculatedPrice = Number((purchasePrice * (saleForm.quantity || 0)).toFixed(2));
+    setSaleForm((prev) => ({ ...prev, salesPrice: calculatedPrice }));
+  }, [saleForm.itemId, saleForm.quantity, items]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const nextErrors = {};
     if (!saleForm.itemId) nextErrors.itemId = 'Select an item';
     if (!saleForm.quantity || Number(saleForm.quantity) <= 0) nextErrors.quantity = 'Quantity must be at least 1';
     if (!saleForm.salesDate) nextErrors.salesDate = 'Sales date is required';
-    if(!saleForm.salesPrice || Number(saleForm.salesPrice) < 0) nextErrors.salesPrice = 'Sales price must be a non-negative number';
+    if (!saleForm.salesPrice || Number(saleForm.salesPrice) < 0) nextErrors.salesPrice = 'Sales price must be a non-negative number';
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
       return;
@@ -61,7 +69,7 @@ function SalesMaster({ setToast }) {
           quantity: Number(saleForm.quantity),
           salesDate: saleForm.salesDate,
           salesPrice: Number(saleForm.salesPrice),
-          
+
         }),
       });
 
@@ -71,6 +79,7 @@ function SalesMaster({ setToast }) {
           itemId: items[0]?.id || '',
           quantity: 1,
           salesDate: new Date().toISOString().slice(0, 10),
+          salesPrice: 0,
         });
         fetchData();
       } else {
@@ -130,14 +139,15 @@ function SalesMaster({ setToast }) {
               onChange={(e) => setSaleForm({ ...saleForm, salesDate: e.target.value })}
             />
             {errors.salesDate && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.salesDate}</div>}
-            
-            <label className="field-label">Sales Price</label>
+
+            <label className="field-label">Sales Price (Auto-calculated)</label>
             <input
               type="number"
               min="0"
               step="0.01"
               value={saleForm.salesPrice}
-              onChange={(e) => setSaleForm({ ...saleForm, salesPrice: Number(e.target.value) })}
+              readOnly
+              style={{ backgroundColor: '#e9ecef', cursor: 'not-allowed' }}
             />
             {errors.salesPrice && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.salesPrice}</div>}
 
@@ -155,7 +165,7 @@ function SalesMaster({ setToast }) {
                   <span>{new Date(sale.salesDate).toLocaleDateString()}</span>
                 </div>
                 <p>Qty: {sale.quantity}</p>
-                <p>Price: ${sale.salesPrice?.toFixed(2)}</p>
+                <p>Price: ${Number(sale?.salesPrice).toFixed(2)}</p>
               </li>
             ))}
           </ul>

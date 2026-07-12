@@ -191,6 +191,14 @@ function PurchaseMaster({ setToast }) {
             />
             {errors.amount && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.amount}</div>}
 
+            <label className="field-label">Total Amount (Auto-calculated)</label>
+            <input
+              type="text"
+              readOnly
+              style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }}
+              value={`${(Number(purchaseForm.quantity || 0) * Number(purchaseForm.amount || 0)).toFixed(2)}`}
+            />
+
             <label className="field-label">Purchase Date</label>
             <input
               type="date"
@@ -213,7 +221,8 @@ function PurchaseMaster({ setToast }) {
                   <span>{new Date(purchase.purchaseDate).toLocaleDateString()}</span>
                 </div>
                 <p>Qty: {purchase.quantity}</p>
-                <p>Amount: {purchase.amount}</p>
+                <p>Price: ${Number(purchase.amount).toFixed(2)}</p>
+                <p>Total Amount: ${(Number(purchase.quantity) * Number(purchase.amount)).toFixed(2)}</p>
               </li>
             ))}
           </ul>

@@ -60,7 +60,7 @@ export const getItemSalesHistory = async (req, res) => {
   const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
   const [rows] = await pool.query(
-    'SELECT id, quantity, salesDate, createdAt FROM sales WHERE itemId = ? ORDER BY salesDate DESC, id DESC LIMIT ? OFFSET ?',
+    'SELECT id, quantity, salesPrice, salesDate, createdAt FROM sales WHERE itemId = ? ORDER BY salesDate DESC, id DESC LIMIT ? OFFSET ?',
     [id, limit, offset]
   );
 

@@ -1,7 +1,7 @@
 export const getSales = async (req, res) => {
   const pool = req.app.locals.pool;
   const [rows] = await pool.query(
-    `SELECT s.id, s.itemId, s.quantity, s.salesDate,
+    `SELECT s.id, s.itemId, s.quantity, s.salesPrice, s.salesDate,
             i.name AS itemName
       FROM sales s
       LEFT JOIN items i ON s.itemId = i.id
@@ -12,7 +12,7 @@ export const getSales = async (req, res) => {
 
 export const createSale = async (req, res) => {
   const pool = req.app.locals.pool;
-  const { itemId, quantity = 1, salesDate = new Date() } = req.body;
+  const { itemId, quantity = 1, salesPrice = 0.00, salesDate = new Date() } = req.body;
 
   if (!itemId || !Number(itemId)) {
     return res.status(400).json({ message: 'Item is required' });
@@ -55,9 +55,9 @@ export const createSale = async (req, res) => {
   }
 
   const [result] = await pool.query(
-    'INSERT INTO sales (itemId, quantity, salesDate) VALUES (?, ?, ?)',
-    [itemId, quantity, salesDate]
+    'INSERT INTO sales (itemId, quantity, salesPrice, salesDate) VALUES (?, ?, ?, ?)',
+    [itemId, quantity, salesPrice, salesDate]
   );
 
-  res.status(201).json({ id: result.insertId, itemId, quantity, salesDate });
+  res.status(201).json({ id: result.insertId, itemId, quantity, salesPrice, salesDate });
 };
