@@ -155,7 +155,7 @@ function App() {
           )}
           {userModules.includes('purchase') && (
             <button className={activeMenu === 'purchase' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('purchase'); navigate('/purchase'); }}>
-              Purchase Master
+              Stock Master
             </button>
           )}
           {userModules.includes('sales') && (
@@ -179,7 +179,7 @@ function App() {
       <main className="main-content">
         <header className="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Purchase Master' : activeMenu === 'sales' ? 'Sales Master' : activeMenu === 'users' ? 'User Master' : 'Report Master'}</h1>
+            <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Stock Master' : activeMenu === 'sales' ? 'Sales Master' : activeMenu === 'users' ? 'User Master' : 'Report Master'}</h1>
             <p>Organize your library with a modern control panel.</p>
           </div>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>

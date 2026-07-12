@@ -65,11 +65,11 @@ function Dashboard({ authHeaders }) {
           </div>
         </article>
         <article className="stats-card green">
-          <h3>Today's Purchase</h3>
+          <h3>Today's Stock In</h3>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <strong>{todayStats.purchasedQty}</strong>
-              <span style={{ display: 'block' }}>Qty Purchased</span>
+              <span style={{ display: 'block' }}>Qty Stocked</span>
             </div>
             <div style={{ textAlign: 'right' }}>
               <strong>{CURRENCY_SYMBOL}{todayStats.purchasedAmount.toFixed(2)}</strong>
@@ -113,13 +113,13 @@ function Dashboard({ authHeaders }) {
         </div>
 
         <div className="card">
-          <h3>Weekly Purchase History (Last 7 Days)</h3>
+          <h3>Weekly Stock History (Last 7 Days)</h3>
           <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
                 <th>Item Name</th>
-                <th>Quantity Purchased</th>
-                <th>Purchase Date</th>
+                <th>Quantity Stocked</th>
+                <th>Stock Date</th>
                 <th>Added By</th>
               </tr>
             </thead>
@@ -136,7 +136,7 @@ function Dashboard({ authHeaders }) {
               ) : (
                 <tr>
                   <td colSpan="4" style={{ textAlign: 'center', color: '#64748b' }}>
-                    No purchases in the last 7 days
+                    No stock recorded in the last 7 days
                   </td>
                 </tr>
               )}

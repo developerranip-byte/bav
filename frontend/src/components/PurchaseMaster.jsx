@@ -123,15 +123,15 @@ function PurchaseMaster({ setToast }) {
     <section className="page-card">
       <div className="page-header">
         <div>
-          <h2>Purchase Master</h2>
-          <span className="page-badge">purchase_master</span>
+          <h2>Stock Master</h2>
+          <span className="page-badge">stock_master</span>
         </div>
-        <p>Record purchase transactions for items.</p>
+        <p>Record stock transactions for items.</p>
       </div>
 
       <section className="content-grid">
         <div className="card">
-          <h3>Add Purchase</h3>
+          <h3>Add Stock</h3>
           <form onSubmit={handleSubmit}>
             <label className="field-label">Search item by name or ISBN</label>
             <input
@@ -173,7 +173,7 @@ function PurchaseMaster({ setToast }) {
               </div>
             )}
 
-            <label className="field-label">Purchase Quantity</label>
+            <label className="field-label">Stock Quantity</label>
             <input
               type="number"
               min="1"
@@ -192,15 +192,7 @@ function PurchaseMaster({ setToast }) {
             />
             {errors.amount && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.amount}</div>}
 
-            <label className="field-label">Total Amount (Auto-calculated)</label>
-            <input
-              type="text"
-              readOnly
-              style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }}
-              value={`${(Number(purchaseForm.quantity || 0) * Number(purchaseForm.amount || 0)).toFixed(2)}`}
-            />
-
-            <label className="field-label">Purchase Date</label>
+            <label className="field-label">Stock Date</label>
             <input
               type="date"
               value={purchaseForm.purchaseDate}
@@ -208,19 +200,18 @@ function PurchaseMaster({ setToast }) {
             />
             {errors.purchaseDate && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.purchaseDate}</div>}
 
-            <button type="submit">Save Purchase</button>
+            <button type="submit">Save Stock</button>
           </form>
         </div>
 
         <div className="card">
-          <h3>Purchase History</h3>
+          <h3>Stock History</h3>
           <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
                 <th>Item</th>
                 <th>Quantity</th>
                 <th>Price</th>
-                <th>Total Amount</th>
                 <th>Date</th>
                 <th>Added By</th>
               </tr>
@@ -232,15 +223,14 @@ function PurchaseMaster({ setToast }) {
                     <td>{findItemName(purchase.itemId)}</td>
                     <td>{purchase.quantity}</td>
                     <td>{CURRENCY_SYMBOL}{Number(purchase.amount).toFixed(2)}</td>
-                    <td>{CURRENCY_SYMBOL}{Number(purchase.totalAmount).toFixed(2)}</td>
                     <td>{new Date(purchase.purchaseDate).toLocaleDateString()}</td>
                     <td>{purchase.addedBy || 'System'}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', color: '#64748b' }}>
-                    No purchases recorded
+                  <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>
+                    No stock recorded
                   </td>
                 </tr>
               )}

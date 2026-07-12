@@ -65,10 +65,10 @@ function ReportMaster({ setToast }) {
                 <th>Category</th>
                 <th>Language</th>
                 <th>Opening Qty</th>
-                <th>Total Purchase</th>
+                <th>Total Stock</th>
                 <th>Total Sold</th>
                 <th>Current Qty</th>
-                <th>Last Purchase</th>
+                <th>Last Stock In</th>
                 <th>Last Sale</th>
                 <th>Actions</th>
               </tr>
@@ -87,7 +87,7 @@ function ReportMaster({ setToast }) {
                   <td>{item.lastSalesDate ? new Date(item.lastSalesDate).toLocaleDateString() : '-'}</td>
                   <td>
                     <button onClick={() => handleHistory(item.id, 'purchase')} style={{ marginRight: 8 }}>
-                      Purchase History
+                      Stock History
                     </button>
                     <button onClick={() => handleHistory(item.id, 'sales')}>
                       Sales History
@@ -102,7 +102,7 @@ function ReportMaster({ setToast }) {
 
       <section style={{ marginTop: 20 }}>
         <div className="card">
-          <h3>{history.type === 'purchase' ? 'Purchase History' : history.type === 'sales' ? 'Sales History' : 'History'}</h3>
+          <h3>{history.type === 'purchase' ? 'Stock History' : history.type === 'sales' ? 'Sales History' : 'History'}</h3>
           {history.type ? (
             <>
               <table className="data-table" style={{ width: '100%' }}>
@@ -110,7 +110,7 @@ function ReportMaster({ setToast }) {
                   <tr>
                     <th>Date</th>
                     <th>Quantity</th>
-                    <th>Total Amount</th>
+                    {history.type !== 'purchase' && <th>Total Amount</th>}
                     <th>Added By</th>
                   </tr>
                 </thead>
@@ -119,10 +119,12 @@ function ReportMaster({ setToast }) {
                     <tr key={row.id}>
                       <td>{new Date(history.type === 'purchase' ? row.purchaseDate : row.salesDate).toLocaleDateString()}</td>
                       <td>{row.quantity}</td>
-                      <td>
-                        {CURRENCY_SYMBOL}
-                        {Number(row.totalAmount).toFixed(2)}
-                      </td>
+                      {history.type !== 'purchase' && (
+                        <td>
+                          {CURRENCY_SYMBOL}
+                          {Number(row.totalAmount).toFixed(2)}
+                        </td>
+                      )}
                       <td>{row.addedBy || 'System'}</td>
                     </tr>
                   ))}
