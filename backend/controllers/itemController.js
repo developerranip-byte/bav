@@ -1,5 +1,5 @@
 import pool from '../db.js';
-import xlsx from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export const getItems = async (req, res) => {
   
@@ -126,27 +126,69 @@ export const deleteItem = async (req, res) => {
 };
 
 export const exportItems = async (req, res) => {
-  
   try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Items');
+    const dropdownSheet = workbook.addWorksheet('DropdownData');
+    dropdownSheet.state = 'hidden';
+
+    const [categories] = await pool.query(`SELECT id, name FROM categories WHERE isActive = 1`);
+    const [languages] = await pool.query(`SELECT id, name FROM languages WHERE isActive = 1`);
+
+    dropdownSheet.getColumn('A').values = ['Categories', ...categories.map(c => c.name)];
+    dropdownSheet.getColumn('B').values = ['Languages', ...languages.map(l => l.name)];
+
     const [rows] = await pool.query(
       `SELECT i.id AS 'Item ID', i.name AS 'Name', i.isbn AS 'ISBN', 
               i.openingQty AS 'Opening Qty',
-              c.name AS 'Category', l.name AS 'Language',
-              i.categoryId AS 'Category ID', i.languageId AS 'Language ID'
+              c.name AS 'Category', l.name AS 'Language'
        FROM items i
        LEFT JOIN categories c ON i.categoryId = c.id
        LEFT JOIN languages l ON i.languageId = l.id
        ORDER BY i.id DESC`
     );
 
-    const worksheet = xlsx.utils.json_to_sheet(rows);
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Items');
-    
-    const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    worksheet.columns = [
+      { header: 'Item ID', key: 'id', width: 10 },
+      { header: 'Name', key: 'name', width: 30 },
+      { header: 'Category', key: 'category', width: 25 },
+      { header: 'Language', key: 'language', width: 25 },
+      { header: 'ISBN', key: 'isbn', width: 20 },
+      { header: 'Opening Qty', key: 'qty', width: 15 }
+    ];
+
+    rows.forEach(r => {
+      worksheet.addRow({
+        id: r['Item ID'],
+        name: r['Name'],
+        category: r['Category'],
+        language: r['Language'],
+        isbn: r['ISBN'],
+        qty: r['Opening Qty']
+      });
+    });
+
+    for (let i = 2; i <= 5000; i++) {
+      if (categories.length > 0) {
+        worksheet.getCell(`C${i}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`DropdownData!$A$2:$A$${categories.length + 1}`]
+        };
+      }
+      if (languages.length > 0) {
+        worksheet.getCell(`D${i}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`DropdownData!$B$2:$B$${languages.length + 1}`]
+        };
+      }
+    }
 
     res.setHeader('Content-Disposition', 'attachment; filename="ItemsMaster.xlsx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    
+    const buffer = await workbook.xlsx.writeBuffer();
     res.send(buffer);
   } catch (err) {
     console.error('Export error:', err);
@@ -155,29 +197,65 @@ export const exportItems = async (req, res) => {
 };
 
 export const importItems = async (req, res) => {
-  
+  if (req.user && req.user.userType !== 'super_admin') {
+    return res.status(403).json({ message: 'Only super admin can import data' });
+  }
+
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
   try {
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer);
+    const worksheet = workbook.getWorksheet('Items') || workbook.worksheets[0];
 
-    if (data.length === 0) {
+    if (!worksheet) {
+      return res.status(400).json({ message: 'No readable sheet found' });
+    }
+
+    const [categories] = await pool.query(`SELECT id, name FROM categories`);
+    const [languages] = await pool.query(`SELECT id, name FROM languages`);
+    
+    const categoryMap = {};
+    categories.forEach(c => categoryMap[c.name] = c.id);
+    const languageMap = {};
+    languages.forEach(l => languageMap[l.name] = l.id);
+
+    let headers = {};
+    worksheet.getRow(1).eachCell((cell, colNumber) => {
+      if (cell.value) headers[cell.value.toString().trim()] = colNumber;
+    });
+
+    const rows = [];
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) rows.push(row);
+    });
+
+    if (rows.length === 0) {
       return res.status(400).json({ message: 'Excel file is empty' });
     }
 
     let importedCount = 0;
-    for (const row of data) {
-      const name = row['Name'];
+    for (const row of rows) {
+      let name = headers['Name'] ? row.getCell(headers['Name']).value : null;
       if (!name) continue;
+      if (typeof name === 'object') name = name.result || name.text;
 
-      const categoryId = row['Category ID'] || null;
-      const languageId = row['Language ID'] || null;
-      const isbn = row['ISBN'] || null;
-      const openingQty = row['Opening Qty'] || 0;
+      let categoryName = headers['Category'] ? row.getCell(headers['Category']).value : null;
+      if (categoryName && typeof categoryName === 'object') categoryName = categoryName.result || categoryName.text;
+
+      let languageName = headers['Language'] ? row.getCell(headers['Language']).value : null;
+      if (languageName && typeof languageName === 'object') languageName = languageName.result || languageName.text;
+
+      let isbn = headers['ISBN'] ? row.getCell(headers['ISBN']).value : null;
+      if (isbn && typeof isbn === 'object') isbn = isbn.result || isbn.text;
+
+      let openingQty = headers['Opening Qty'] ? row.getCell(headers['Opening Qty']).value : 0;
+      if (openingQty && typeof openingQty === 'object') openingQty = openingQty.result || openingQty.text;
+
+      const categoryId = categoryMap[categoryName] || null;
+      const languageId = languageMap[languageName] || null;
       
       await pool.query(
         'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, ?, 1)',

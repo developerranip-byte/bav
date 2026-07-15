@@ -1,5 +1,5 @@
 import pool from '../db.js';
-import xlsx from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export const getPurchases = async (req, res) => {
   
@@ -86,8 +86,15 @@ export const createPurchase = async (req, res) => {
 };
 
 export const exportPurchases = async (req, res) => {
-  
   try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Stock');
+    const dropdownSheet = workbook.addWorksheet('DropdownData');
+    dropdownSheet.state = 'hidden';
+
+    const [items] = await pool.query(`SELECT id, name FROM items WHERE isActive = 1`);
+    dropdownSheet.getColumn('A').values = ['Items', ...items.map(i => i.name)];
+
     const [rows] = await pool.query(
       `SELECT p.id AS 'Stock ID', p.purchaseDate AS 'Date', p.itemId AS 'Item ID', 
               i.name AS 'Item Name', p.quantity AS 'Quantity', p.amount AS 'Price',
@@ -99,14 +106,66 @@ export const exportPurchases = async (req, res) => {
        ORDER BY p.purchaseDate DESC, p.id DESC`
     );
 
-    const worksheet = xlsx.utils.json_to_sheet(rows);
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Stock');
-    
-    const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    worksheet.columns = [
+      { header: 'Stock ID', key: 'id', width: 10 },
+      { header: 'Date', key: 'date', width: 15 },
+      { header: 'Item Name', key: 'itemName', width: 30 },
+      { header: 'Quantity', key: 'qty', width: 15 },
+      { header: 'Price', key: 'price', width: 15 },
+      { header: 'Total Amount', key: 'total', width: 15 },
+      { header: 'Added By', key: 'addedBy', width: 20 }
+    ];
+
+    rows.forEach(r => {
+      worksheet.addRow({
+        id: r['Stock ID'],
+        date: r['Date'],
+        itemName: r['Item Name'],
+        qty: r['Quantity'],
+        price: r['Price'],
+        total: r['Total Amount'],
+        addedBy: r['Added By']
+      });
+    });
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    for (let i = 2; i <= 5000; i++) {
+      if (items.length > 0) {
+        worksheet.getCell(`C${i}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`DropdownData!$A$2:$A$${items.length + 1}`]
+        };
+      }
+      
+      // Date validation (column B)
+      worksheet.getCell(`B${i}`).dataValidation = {
+        type: 'date',
+        operator: 'lessThanOrEqual',
+        allowBlank: true,
+        formulae: [new Date(todayStr)],
+        showErrorMessage: true,
+        errorTitle: 'Invalid Date',
+        error: 'Future dates are not allowed.'
+      };
+      
+      // Quantity validation (column D)
+      worksheet.getCell(`D${i}`).dataValidation = {
+        type: 'whole',
+        operator: 'greaterThanOrEqual',
+        allowBlank: true,
+        formulae: [1],
+        showErrorMessage: true,
+        errorTitle: 'Invalid Quantity',
+        error: 'Quantity must be a whole number greater than or equal to 1.'
+      };
+    }
 
     res.setHeader('Content-Disposition', 'attachment; filename="StockMaster.xlsx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    
+    const buffer = await workbook.xlsx.writeBuffer();
     res.send(buffer);
   } catch (err) {
     console.error('Export error:', err);
@@ -115,40 +174,77 @@ export const exportPurchases = async (req, res) => {
 };
 
 export const importPurchases = async (req, res) => {
-  
+  if (req.user && req.user.userType !== 'super_admin') {
+    return res.status(403).json({ message: 'Only super admin can import data' });
+  }
+
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
   try {
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer);
+    const worksheet = workbook.getWorksheet('Stock') || workbook.worksheets[0];
 
-    if (data.length === 0) {
+    if (!worksheet) {
+      return res.status(400).json({ message: 'No readable sheet found' });
+    }
+
+    const [items] = await pool.query(`SELECT id, name FROM items`);
+    const itemMap = {};
+    items.forEach(i => itemMap[i.name] = i.id);
+
+    let headers = {};
+    worksheet.getRow(1).eachCell((cell, colNumber) => {
+      if (cell.value) headers[cell.value.toString().trim()] = colNumber;
+    });
+
+    const rows = [];
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) rows.push(row);
+    });
+
+    if (rows.length === 0) {
       return res.status(400).json({ message: 'Excel file is empty' });
     }
 
     const userId = req.user ? req.user.id : null;
     let importedCount = 0;
 
-    for (const row of data) {
-      const itemId = row['Item ID'];
-      const quantity = row['Quantity'];
-      const amount = row['Price'] || 0;
-      
-      let purchaseDate = row['Date'];
-      // Handle Excel date numbers if needed, or assume YYYY-MM-DD
-      if (typeof purchaseDate === 'number') {
-         // Convert Excel serial date to JS Date
-         purchaseDate = new Date(Math.round((purchaseDate - 25569)*86400*1000));
+    for (const row of rows) {
+      let itemName = headers['Item Name'] ? row.getCell(headers['Item Name']).value : null;
+      if (!itemName) continue;
+      if (typeof itemName === 'object') itemName = itemName.result || itemName.text;
+
+      let quantity = headers['Quantity'] ? row.getCell(headers['Quantity']).value : null;
+      if (typeof quantity === 'object') quantity = quantity.result || quantity.text;
+      quantity = Number(quantity);
+      if (isNaN(quantity) || quantity < 1) continue;
+
+      let amount = headers['Price'] ? row.getCell(headers['Price']).value : 0;
+      if (typeof amount === 'object') amount = amount.result || amount.text;
+      amount = Number(amount) || 0;
+
+      let purchaseDate = headers['Date'] ? row.getCell(headers['Date']).value : null;
+      if (typeof purchaseDate === 'object' && purchaseDate instanceof Date) {
+        // exceljs parses dates automatically if formatted as date
+      } else if (typeof purchaseDate === 'number') {
+        purchaseDate = new Date(Math.round((purchaseDate - 25569)*86400*1000));
+      } else if (typeof purchaseDate === 'string') {
+        purchaseDate = new Date(purchaseDate);
       }
       
-      if (!purchaseDate) {
+      if (!purchaseDate || isNaN(purchaseDate.getTime())) {
         purchaseDate = new Date();
       }
+      
+      if (purchaseDate > new Date()) {
+         purchaseDate = new Date();
+      }
 
-      if (!itemId || !quantity) continue;
+      const itemId = itemMap[itemName];
+      if (!itemId) continue;
       
       await pool.query(
         'INSERT INTO purchases (itemId, quantity, amount, purchaseDate, userId) VALUES (?, ?, ?, ?, ?)',

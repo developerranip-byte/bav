@@ -166,17 +166,77 @@ function SalesMaster({ setToast }) {
       setToast({ type: 'error', message: err.message || 'Network error' });
     }
   };
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/sales/export`, { headers: headers() });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'SalesMaster.xlsx';
+        a.click();
+      } else {
+        setToast({ type: 'error', message: 'Failed to export' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: 'Network error' });
+    }
+  };
 
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API_BASE}/sales/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('bav_auth_token')}`,
+        },
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setToast({ type: 'success', message: data.message });
+        fetchSales(1);
+      } else {
+        const data = await res.json();
+        setToast({ type: 'error', message: data.message || 'Import failed' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: 'Network error' });
+    }
+    e.target.value = null; // reset input
+  };
 
   return (
     <section className="page-card">
-      <div className="page-header">
+      <div className="page-header" style={{ alignItems: 'flex-start' }}>
         <div>
           <h2>Sales Master</h2>
           <span className="page-badge">sales_master</span>
+          <p style={{ marginTop: 8 }}>Record customer sales and validate stock availability.</p>
         </div>
-        <p>Record customer sales and validate stock availability.</p>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {localStorage.getItem('bav_user_type') === 'super_admin' && (
+            <label style={{ cursor: 'pointer', background: '#3b82f6', color: 'white', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', border: 'none', display: 'inline-block' }}>
+              Import Excel
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                style={{ display: 'none' }}
+                onChange={handleImport}
+              />
+            </label>
+          )}
+          <button onClick={handleExport} style={{ background: '#16a34a' }}>
+            Export Excel
+          </button>
+        </div>
       </div>
 
       <section className="content-grid">

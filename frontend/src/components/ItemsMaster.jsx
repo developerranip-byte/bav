@@ -206,16 +206,20 @@ function ItemsMaster({ setToast }) {
           <p style={{ marginTop: 8 }}>Maintain item master details including category, language, quantity, and status.</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input 
-            type="file" 
-            id="import-excel" 
-            accept=".xlsx, .xls" 
-            style={{ display: 'none' }} 
-            onChange={handleImport}
-          />
-          <label htmlFor="import-excel" className="menu-btn" style={{ background: '#5C060E', color: 'white', textAlign: 'center', margin: 0 }}>
-            Import Excel
-          </label>
+          {localStorage.getItem('bav_user_type') === 'super_admin' && (
+            <>
+              <input 
+                type="file" 
+                id="import-excel" 
+                accept=".xlsx, .xls" 
+                style={{ display: 'none' }} 
+                onChange={handleImport}
+              />
+              <label htmlFor="import-excel" className="menu-btn" style={{ background: '#5C060E', color: 'white', textAlign: 'center', margin: 0 }}>
+                Import Excel
+              </label>
+            </>
+          )}
           <button onClick={handleExport} style={{ background: '#16a34a' }}>
             Export Excel
           </button>
