@@ -8,6 +8,7 @@ import PurchaseMaster from './components/PurchaseMaster';
 import SalesMaster from './components/SalesMaster';
 import ReportMaster from './components/ReportMaster';
 import UserMaster from './components/UserMaster';
+import SeedMaster from './components/SeedMaster';
 import Login from './components/Login';
 import { API_BASE, createAuthHeaders } from './utils/api';
 
@@ -173,13 +174,18 @@ function App() {
               User Master
             </button>
           )}
+          {userType === 'super_admin' && (
+            <button className={activeMenu === 'seed' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('seed'); navigate('/seed'); }}>
+              Seed Scripts
+            </button>
+          )}
         </nav>
       </aside>
 
       <main className="main-content">
         <header className="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Stock Master' : activeMenu === 'sales' ? 'Sales Master' : activeMenu === 'users' ? 'User Master' : 'Report Master'}</h1>
+            <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Stock Master' : activeMenu === 'sales' ? 'Sales Master' : activeMenu === 'users' ? 'User Master' : activeMenu === 'seed' ? 'Seed Scripts' : 'Report Master'}</h1>
             <p>Organize your library with a modern control panel.</p>
           </div>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
@@ -193,6 +199,7 @@ function App() {
           {userModules.includes('sales') && <Route path="/sales" element={<SalesMaster authHeaders={authHeaders} setToast={setToast} />} />}
           {userModules.includes('report') && <Route path="/report" element={<ReportMaster authHeaders={authHeaders} setToast={setToast} />} />}
           {userModules.includes('users') && <Route path="/users" element={<UserMaster authHeaders={authHeaders} setToast={setToast} />} />}
+          {userType === 'super_admin' && <Route path="/seed" element={<SeedMaster setToast={setToast} />} />}
           <Route path="/" element={<Dashboard authHeaders={authHeaders} />} />
           <Route path="*" element={<UnauthorizedRedirect setToast={setToast} />} />
         </Routes>
