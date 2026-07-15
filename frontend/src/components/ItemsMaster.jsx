@@ -13,6 +13,7 @@ function ItemsMaster({ setToast }) {
     isActive: true,
   });
   const [editingId, setEditingId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ search: '', categoryId: '', languageId: '' });
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [errors, setErrors] = useState({});
@@ -134,6 +135,28 @@ function ItemsMaster({ setToast }) {
       });
       if (res.ok || res.status === 204) {
         setToast({ type: 'success', message: 'Item deleted' });
+        fetchItems(itemsData.page);
+      } else {
+        const error = await res.json();
+        setToast({ type: 'error', message: error.message || res.statusText });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Network error' });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.length} selected items?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/items/bulk-delete`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      if (res.ok || res.status === 204) {
+        setToast({ type: 'success', message: `${selectedIds.length} items deleted` });
+        setSelectedIds([]);
         fetchItems(itemsData.page);
       } else {
         const error = await res.json();
@@ -324,11 +347,29 @@ function ItemsMaster({ setToast }) {
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => fetchItems(1)} style={{ padding: '10px 16px' }}>Filter</button>
               <button onClick={() => { setFilters({ search: '', categoryId: '', languageId: '' }); setTimeout(() => fetchItems(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
+              {selectedIds.length > 0 && (
+                <button onClick={handleBulkDelete} style={{ padding: '10px 16px', background: '#dc2626' }}>
+                  Delete Selected ({selectedIds.length})
+                </button>
+              )}
             </div>
           </div>
           <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
+                <th style={{ width: '40px', textAlign: 'center' }}>
+                  <input 
+                    type="checkbox"
+                    checked={itemsData.data.length > 0 && selectedIds.length === itemsData.data.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(itemsData.data.map(item => item.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                  />
+                </th>
                 <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Name{renderSortIcon('name')}</th>
                 <th onClick={() => handleSort('categoryName')} style={{ cursor: 'pointer' }}>Category{renderSortIcon('categoryName')}</th>
                 <th onClick={() => handleSort('languageName')} style={{ cursor: 'pointer' }}>Language{renderSortIcon('languageName')}</th>
@@ -340,6 +381,19 @@ function ItemsMaster({ setToast }) {
             <tbody>
               {itemsData.data.map((item) => (
                 <tr key={item.id}>
+                  <td style={{ textAlign: 'center' }}>
+                    <input 
+                      type="checkbox"
+                      checked={selectedIds.includes(item.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(prev => [...prev, item.id]);
+                        } else {
+                          setSelectedIds(prev => prev.filter(id => id !== item.id));
+                        }
+                      }}
+                    />
+                  </td>
                   <td><strong>{item.name}</strong></td>
                   <td>{findCategoryName(item.categoryId)}</td>
                   <td>{findLanguageName(item.languageId)}</td>

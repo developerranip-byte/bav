@@ -119,10 +119,27 @@ export const updateItem = async (req, res) => {
 };
 
 export const deleteItem = async (req, res) => {
-  
   const { id } = req.params;
   await pool.query('DELETE FROM items WHERE id = ?', [id]);
   res.status(204).end();
+};
+
+export const bulkDeleteItems = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'No item IDs provided' });
+    }
+    
+    // Create a dynamic query with ? placeholders based on the number of ids
+    const placeholders = ids.map(() => '?').join(',');
+    await pool.query(`DELETE FROM items WHERE id IN (${placeholders})`, ids);
+    
+    res.status(204).end();
+  } catch (err) {
+    console.error('Bulk delete error:', err);
+    res.status(500).json({ message: 'Failed to delete items', error: err.message });
+  }
 };
 
 export const exportItems = async (req, res) => {
