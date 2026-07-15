@@ -160,6 +160,9 @@ export const exportPurchases = async (req, res) => {
         errorTitle: 'Invalid Quantity',
         error: 'Quantity must be a whole number greater than or equal to 1.'
       };
+      
+      // Auto-calculate Total Amount (column F)
+      worksheet.getCell(`F${i}`).value = { formula: `IF(AND(ISNUMBER(D${i}), ISNUMBER(E${i})), D${i}*E${i}, "")` };
     }
 
     res.setHeader('Content-Disposition', 'attachment; filename="StockMaster.xlsx"');

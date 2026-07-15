@@ -125,8 +125,17 @@ export const exportSales = async (req, res) => {
     const dropdownSheet = workbook.addWorksheet('DropdownData');
     dropdownSheet.state = 'hidden';
 
-    const [items] = await pool.query(`SELECT id, name FROM items WHERE isActive = 1`);
+    const [items] = await pool.query(`
+      SELECT i.id, i.name, 
+        (i.openingQty 
+         + COALESCE((SELECT SUM(quantity) FROM purchases WHERE itemId = i.id), 0) 
+         - COALESCE((SELECT SUM(quantity) FROM sales WHERE itemId = i.id), 0)) AS availableQty
+      FROM items i 
+      WHERE i.isActive = 1
+    `);
+    
     dropdownSheet.getColumn('A').values = ['Items', ...items.map(i => i.name)];
+    dropdownSheet.getColumn('B').values = ['Available', ...items.map(i => i.availableQty)];
 
     const [rows] = await pool.query(
       `SELECT s.id AS 'Sale ID', s.salesDate AS 'Date', s.itemId AS 'Item ID', 
@@ -144,6 +153,7 @@ export const exportSales = async (req, res) => {
       { header: 'Item Name', key: 'itemName', width: 30 },
       { header: 'Quantity', key: 'qty', width: 15 },
       { header: 'Price', key: 'price', width: 15 },
+      { header: 'Total Amount', key: 'total', width: 15 },
       { header: 'Added By', key: 'addedBy', width: 20 }
     ];
 
@@ -154,6 +164,7 @@ export const exportSales = async (req, res) => {
         itemName: r['Item Name'],
         qty: r['Quantity'],
         price: r['Price'],
+        total: '',
         addedBy: r['Added By']
       });
     });
@@ -180,16 +191,19 @@ export const exportSales = async (req, res) => {
         error: 'Future dates are not allowed.'
       };
       
-      // Quantity validation (column D)
+      // Quantity validation (column D) with dynamic max based on available stock
       worksheet.getCell(`D${i}`).dataValidation = {
         type: 'whole',
-        operator: 'greaterThanOrEqual',
+        operator: 'between',
         allowBlank: true,
-        formulae: [1],
+        formulae: [1, `VLOOKUP($C$${i}, DropdownData!$A$2:$B$${items.length + 1}, 2, FALSE)`],
         showErrorMessage: true,
         errorTitle: 'Invalid Quantity',
-        error: 'Quantity must be a whole number greater than or equal to 1.'
+        error: 'Quantity must be a whole number between 1 and the available stock for the selected item.'
       };
+      
+      // Auto-calculate Total Amount (column F)
+      worksheet.getCell(`F${i}`).value = { formula: `IF(AND(ISNUMBER(D${i}), ISNUMBER(E${i})), D${i}*E${i}, "")` };
     }
 
     res.setHeader('Content-Disposition', 'attachment; filename="SalesMaster.xlsx"');
@@ -277,12 +291,33 @@ export const importSales = async (req, res) => {
       saleId = Number(saleId);
 
       if (saleId && !isNaN(saleId) && saleId > 0) {
+        // Stock validation for UPDATE
+        const [openingRows] = await pool.query('SELECT openingQty FROM items WHERE id = ?', [itemId]);
+        const openingQty = Number(openingRows[0]?.openingQty || 0);
+
+        const [purchaseRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalPurchased FROM purchases WHERE itemId = ?', [itemId]);
+        const purchasedQty = Number(purchaseRows[0]?.totalPurchased || 0);
+
+        const [salesRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalSold FROM sales WHERE itemId = ?', [itemId]);
+        const soldQty = Number(salesRows[0]?.totalSold || 0);
+
+        let available = openingQty + purchasedQty - soldQty;
+
+        const [oldSaleRows] = await pool.query('SELECT quantity FROM sales WHERE id = ?', [saleId]);
+        if (oldSaleRows.length > 0) {
+          available += Number(oldSaleRows[0].quantity);
+        }
+
+        if (quantity > available) {
+          continue; // Skip row, exceeds available stock
+        }
+
         await pool.query(
           'UPDATE sales SET itemId = ?, quantity = ?, salesPrice = ?, salesDate = ?, userId = ? WHERE id = ?',
           [itemId, quantity, salesPrice, salesDate, userId, saleId]
         );
       } else {
-        // Basic stock validation (to match UI, though simpler to just insert or do strict check)
+        // Stock validation for INSERT
         const [openingRows] = await pool.query('SELECT openingQty FROM items WHERE id = ?', [itemId]);
         const openingQty = Number(openingRows[0]?.openingQty || 0);
 
@@ -295,8 +330,7 @@ export const importSales = async (req, res) => {
         const available = openingQty + purchasedQty - soldQty;
         
         if (quantity > available) {
-          // Skip importing this row if not enough stock
-          continue;
+          continue; // Skip row, exceeds available stock
         }
         
         await pool.query(
