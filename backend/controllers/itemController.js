@@ -278,6 +278,6 @@ export const importItems = async (req, res) => {
     res.json({ message: `Successfully imported ${importedCount} items` });
   } catch (err) {
     console.error('Import error:', err);
-    res.status(500).json({ message: 'Failed to import items' });
+    res.status(500).json({ message: 'Failed to import items', error: err.message });
   }
 };

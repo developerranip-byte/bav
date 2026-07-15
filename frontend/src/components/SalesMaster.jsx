@@ -205,7 +205,7 @@ function SalesMaster({ setToast }) {
         fetchSales(1);
       } else {
         const data = await res.json();
-        setToast({ type: 'error', message: data.message || 'Import failed' });
+        setToast({ type: 'error', message: data.error ? `${data.message}: ${data.error}` : (data.message || 'Import failed') });
       }
     } catch (err) {
       setToast({ type: 'error', message: 'Network error' });

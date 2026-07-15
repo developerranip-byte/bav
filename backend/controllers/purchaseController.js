@@ -267,6 +267,6 @@ export const importPurchases = async (req, res) => {
     res.json({ message: `Successfully imported ${importedCount} stock records` });
   } catch (err) {
     console.error('Import error:', err);
-    res.status(500).json({ message: 'Failed to import stock' });
+    res.status(500).json({ message: 'Failed to import stock', error: err.message });
   }
 };

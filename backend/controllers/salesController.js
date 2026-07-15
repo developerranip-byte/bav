@@ -310,6 +310,6 @@ export const importSales = async (req, res) => {
     res.json({ message: `Successfully imported ${importedCount} sales records` });
   } catch (err) {
     console.error('Import error:', err);
-    res.status(500).json({ message: 'Failed to import sales' });
+    res.status(500).json({ message: 'Failed to import sales', error: err.message });
   }
 };
