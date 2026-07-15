@@ -140,7 +140,6 @@ export const exportItems = async (req, res) => {
 
     const [rows] = await pool.query(
       `SELECT i.id AS 'Item ID', i.name AS 'Name', i.isbn AS 'ISBN', 
-              i.openingQty AS 'Opening Qty',
               c.name AS 'Category', l.name AS 'Language'
        FROM items i
        LEFT JOIN categories c ON i.categoryId = c.id
@@ -153,8 +152,7 @@ export const exportItems = async (req, res) => {
       { header: 'Name', key: 'name', width: 30 },
       { header: 'Category', key: 'category', width: 25 },
       { header: 'Language', key: 'language', width: 25 },
-      { header: 'ISBN', key: 'isbn', width: 20 },
-      { header: 'Opening Qty', key: 'qty', width: 15 }
+      { header: 'ISBN', key: 'isbn', width: 20 }
     ];
 
     rows.forEach(r => {
@@ -163,8 +161,7 @@ export const exportItems = async (req, res) => {
         name: r['Name'],
         category: r['Category'],
         language: r['Language'],
-        isbn: r['ISBN'],
-        qty: r['Opening Qty']
+        isbn: r['ISBN']
       });
     });
 
@@ -251,9 +248,6 @@ export const importItems = async (req, res) => {
       let isbn = headers['ISBN'] ? row.getCell(headers['ISBN']).value : null;
       if (isbn && typeof isbn === 'object') isbn = isbn.result || isbn.text;
 
-      let openingQty = headers['Opening Qty'] ? row.getCell(headers['Opening Qty']).value : 0;
-      if (openingQty && typeof openingQty === 'object') openingQty = openingQty.result || openingQty.text;
-
       const categoryId = categoryMap[categoryName] || null;
       const languageId = languageMap[languageName] || null;
       
@@ -263,13 +257,13 @@ export const importItems = async (req, res) => {
 
       if (itemId && !isNaN(itemId) && itemId > 0) {
         await pool.query(
-          'UPDATE items SET name = ?, categoryId = ?, languageId = ?, isbn = ?, openingQty = ? WHERE id = ?',
-          [name, categoryId, languageId, isbn, openingQty, itemId]
+          'UPDATE items SET name = ?, categoryId = ?, languageId = ?, isbn = ?, openingQty = 0 WHERE id = ?',
+          [name, categoryId, languageId, isbn, itemId]
         );
       } else {
         await pool.query(
-          'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, ?, 1)',
-          [name, categoryId, languageId, isbn, openingQty]
+          'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, 0, 1)',
+          [name, categoryId, languageId, isbn]
         );
       }
       importedCount++;

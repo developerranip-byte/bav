@@ -208,11 +208,11 @@ function ItemsMaster({ setToast }) {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {localStorage.getItem('bav_user_type') === 'super_admin' && (
             <>
-              <input 
-                type="file" 
-                id="import-excel" 
-                accept=".xlsx, .xls" 
-                style={{ display: 'none' }} 
+              <input
+                type="file"
+                id="import-excel"
+                accept=".xlsx, .xls"
+                style={{ display: 'none' }}
                 onChange={handleImport}
               />
               <label htmlFor="import-excel" className="menu-btn" style={{ background: '#5C060E', color: 'white', textAlign: 'center', margin: 0 }}>
@@ -284,8 +284,8 @@ function ItemsMaster({ setToast }) {
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="submit" style={{ flex: 1 }}>{editingId ? 'Update' : 'Save'} Item</button>
               {editingId && (
-                <button type="button" onClick={() => { 
-                  setEditingId(null); 
+                <button type="button" onClick={() => {
+                  setEditingId(null);
                   setItemForm({
                     name: '',
                     categoryId: categories[0]?.id || '',
