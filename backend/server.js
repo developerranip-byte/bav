@@ -12,6 +12,7 @@ import reportRoutes from './routes/reportRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import seedRoutes from './routes/seedRoutes.js';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from './controllers/authController.js';
 
@@ -32,6 +33,9 @@ app.get('/api/init-db', async (req, res) => {
     res.status(500).json({ message: 'Database initialization failed.', error: error.message });
   }
 });
+
+// Seed API Endpoints
+app.use('/api/scripts', seedRoutes);
 
 app.use('/api/auth', authRoutes);
 
