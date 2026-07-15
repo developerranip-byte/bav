@@ -11,7 +11,7 @@ const rootDir = path.join(__dirname, '..');
 
 const runScript = (scriptName, req, res) => {
   const scriptPath = path.join(rootDir, scriptName);
-  
+
   if (!fs.existsSync(scriptPath)) {
     return res.status(404).json({ message: `Script ${scriptName} not found` });
   }
@@ -20,28 +20,42 @@ const runScript = (scriptName, req, res) => {
   exec(`node ${scriptPath}`, { cwd: rootDir }, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error executing ${scriptName}:`, error);
-      return res.status(500).json({ 
-        message: `Error running ${scriptName}`, 
-        error: error.message, 
-        stderr 
+      return res.status(500).json({
+        message: `Error running ${scriptName}`,
+        error: error.message,
+        stderr
       });
     }
-    res.json({ 
-      message: `Successfully executed ${scriptName}`, 
-      stdout 
+    res.json({
+      message: `Successfully executed ${scriptName}`,
+      stdout
     });
   });
 };
 
+router.get('/list', (req, res) => {
+  try {
+    const files = fs.readdirSync(rootDir);
+    const scripts = files.filter(f =>
+      f.endsWith('.js') &&
+      f !== 'server.js' &&
+      f !== 'db.js'
+    );
+    res.json(scripts);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to list scripts', error: err.message });
+  }
+});
+
 // Dynamic route to run any JS script in the backend root directory
 router.get('/run/:scriptName', (req, res) => {
   const { scriptName } = req.params;
-  
+
   // Security check: ensure it's a .js file and prevent directory traversal
   if (!scriptName.endsWith('.js') || scriptName.includes('..') || scriptName.includes('/') || scriptName.includes('\\')) {
     return res.status(400).json({ message: 'Invalid script name. Must be a .js file in the root directory.' });
   }
-  
+
   runScript(scriptName, req, res);
 });
 
