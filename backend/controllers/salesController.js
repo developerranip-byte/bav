@@ -272,27 +272,38 @@ export const importSales = async (req, res) => {
       const itemId = itemMap[itemName];
       if (!itemId) continue;
       
-      // Basic stock validation (to match UI, though simpler to just insert or do strict check)
-      const [openingRows] = await pool.query('SELECT openingQty FROM items WHERE id = ?', [itemId]);
-      const openingQty = Number(openingRows[0]?.openingQty || 0);
+      let saleId = headers['Sale ID'] ? row.getCell(headers['Sale ID']).value : null;
+      if (saleId && typeof saleId === 'object') saleId = saleId.result || saleId.text;
+      saleId = Number(saleId);
 
-      const [purchaseRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalPurchased FROM purchases WHERE itemId = ?', [itemId]);
-      const purchasedQty = Number(purchaseRows[0]?.totalPurchased || 0);
+      if (saleId && !isNaN(saleId) && saleId > 0) {
+        await pool.query(
+          'UPDATE sales SET itemId = ?, quantity = ?, salesPrice = ?, salesDate = ?, userId = ? WHERE id = ?',
+          [itemId, quantity, salesPrice, salesDate, userId, saleId]
+        );
+      } else {
+        // Basic stock validation (to match UI, though simpler to just insert or do strict check)
+        const [openingRows] = await pool.query('SELECT openingQty FROM items WHERE id = ?', [itemId]);
+        const openingQty = Number(openingRows[0]?.openingQty || 0);
 
-      const [salesRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalSold FROM sales WHERE itemId = ?', [itemId]);
-      const soldQty = Number(salesRows[0]?.totalSold || 0);
+        const [purchaseRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalPurchased FROM purchases WHERE itemId = ?', [itemId]);
+        const purchasedQty = Number(purchaseRows[0]?.totalPurchased || 0);
 
-      const available = openingQty + purchasedQty - soldQty;
-      
-      if (quantity > available) {
-        // Skip importing this row if not enough stock
-        continue;
+        const [salesRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalSold FROM sales WHERE itemId = ?', [itemId]);
+        const soldQty = Number(salesRows[0]?.totalSold || 0);
+
+        const available = openingQty + purchasedQty - soldQty;
+        
+        if (quantity > available) {
+          // Skip importing this row if not enough stock
+          continue;
+        }
+        
+        await pool.query(
+          'INSERT INTO sales (itemId, quantity, salesPrice, salesDate, userId) VALUES (?, ?, ?, ?, ?)',
+          [itemId, quantity, salesPrice, salesDate, userId]
+        );
       }
-      
-      await pool.query(
-        'INSERT INTO sales (itemId, quantity, salesPrice, salesDate, userId) VALUES (?, ?, ?, ?, ?)',
-        [itemId, quantity, salesPrice, salesDate, userId]
-      );
       importedCount++;
     }
 

@@ -246,10 +246,21 @@ export const importPurchases = async (req, res) => {
       const itemId = itemMap[itemName];
       if (!itemId) continue;
       
-      await pool.query(
-        'INSERT INTO purchases (itemId, quantity, amount, purchaseDate, userId) VALUES (?, ?, ?, ?, ?)',
-        [itemId, quantity, amount, purchaseDate, userId]
-      );
+      let stockId = headers['Stock ID'] ? row.getCell(headers['Stock ID']).value : null;
+      if (stockId && typeof stockId === 'object') stockId = stockId.result || stockId.text;
+      stockId = Number(stockId);
+
+      if (stockId && !isNaN(stockId) && stockId > 0) {
+        await pool.query(
+          'UPDATE purchases SET itemId = ?, quantity = ?, amount = ?, purchaseDate = ?, userId = ? WHERE id = ?',
+          [itemId, quantity, amount, purchaseDate, userId, stockId]
+        );
+      } else {
+        await pool.query(
+          'INSERT INTO purchases (itemId, quantity, amount, purchaseDate, userId) VALUES (?, ?, ?, ?, ?)',
+          [itemId, quantity, amount, purchaseDate, userId]
+        );
+      }
       importedCount++;
     }
 

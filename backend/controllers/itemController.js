@@ -257,10 +257,21 @@ export const importItems = async (req, res) => {
       const categoryId = categoryMap[categoryName] || null;
       const languageId = languageMap[languageName] || null;
       
-      await pool.query(
-        'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, ?, 1)',
-        [name, categoryId, languageId, isbn, openingQty]
-      );
+      let itemId = headers['Item ID'] ? row.getCell(headers['Item ID']).value : null;
+      if (itemId && typeof itemId === 'object') itemId = itemId.result || itemId.text;
+      itemId = Number(itemId);
+
+      if (itemId && !isNaN(itemId) && itemId > 0) {
+        await pool.query(
+          'UPDATE items SET name = ?, categoryId = ?, languageId = ?, isbn = ?, openingQty = ? WHERE id = ?',
+          [name, categoryId, languageId, isbn, openingQty, itemId]
+        );
+      } else {
+        await pool.query(
+          'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, ?, 1)',
+          [name, categoryId, languageId, isbn, openingQty]
+        );
+      }
       importedCount++;
     }
 
