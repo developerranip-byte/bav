@@ -83,7 +83,6 @@ function UserMaster({ authHeaders, setToast }) {
       <div className="page-header">
         <div>
           <h2>User Master</h2>
-          <span className="page-badge">user_master</span>
         </div>
         <p>Manage system users, roles, and access controls.</p>
       </div>

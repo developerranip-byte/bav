@@ -224,8 +224,7 @@ function ItemsMaster({ setToast }) {
     <section className="page-card">
       <div className="page-header">
         <div>
-          <h2>Items Master</h2>
-          <span className="page-badge">items_master</span>
+          <h2>Item Master</h2>
           <p style={{ marginTop: 8 }}>Maintain item master details including category, language, quantity, and status.</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>

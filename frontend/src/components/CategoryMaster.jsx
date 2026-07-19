@@ -82,7 +82,6 @@ function CategoryMaster({ authHeaders, setToast }) {
       <div className="page-header">
         <div>
           <h2>Category Master</h2>
-          <span className="page-badge">category_master</span>
         </div>
         <p>Maintain category information from one place.</p>
       </div>

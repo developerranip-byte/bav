@@ -93,8 +93,7 @@ function ReportMaster({ setToast }) {
     <section className="page-card">
       <div className="page-header">
         <div>
-          <h2>Item Report</h2>
-          <span className="page-badge">report_master</span>
+          <h2>Report Master</h2>
         </div>
         <p>View item stock, last purchase/sale details, and history.</p>
       </div>

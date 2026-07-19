@@ -211,7 +211,6 @@ function PurchaseMaster({ setToast }) {
       <div className="page-header">
         <div>
           <h2>Stock Master</h2>
-          <span className="page-badge">stock_master</span>
           <p style={{ marginTop: 8 }}>Record stock transactions for items.</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>

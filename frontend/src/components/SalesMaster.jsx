@@ -218,7 +218,6 @@ function SalesMaster({ setToast }) {
       <div className="page-header" style={{ alignItems: 'flex-start' }}>
         <div>
           <h2>Sales Master</h2>
-          <span className="page-badge">sales_master</span>
           <p style={{ marginTop: 8 }}>Record customer sales and validate stock availability.</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
