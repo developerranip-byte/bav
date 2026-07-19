@@ -41,12 +41,19 @@ const BarcodeScanner = ({ onScan, onClose }) => {
   return (
     <div style={modalStyle}>
       <div style={contentStyle}>
+        <style>{`
+          #reader { border: none !important; }
+          #reader__dashboard_section_csr span { display: block; margin-bottom: 8px; color: #333; }
+          #reader button { padding: 8px 16px; background-color: #2563eb; color: white; border: none; border-radius: 4px; margin: 4px; cursor: pointer; font-size: 14px; }
+          #reader select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; max-width: 100%; margin-bottom: 8px; width: 100%; font-size: 14px; }
+          #reader video { border-radius: 8px; width: 100% !important; max-height: 40vh; object-fit: cover; }
+        `}</style>
         <h3 style={{ marginBottom: '8px' }}>Scan ISBN Barcode</h3>
         <p style={{ marginBottom: '16px', color: '#666', fontSize: '14px' }}>
           Point your device camera at the book's barcode.
         </p>
         <div id="reader" style={{ width: '100%', margin: '0 auto' }}></div>
-        <button type="button" onClick={onClose} style={{ marginTop: '20px', background: '#dc2626', width: '100%' }}>
+        <button type="button" onClick={onClose} style={{ marginTop: '20px', background: '#dc2626', width: '100%', padding: '12px', fontSize: '16px' }}>
           Cancel Scanning
         </button>
       </div>
@@ -69,10 +76,12 @@ const modalStyle = {
 
 const contentStyle = {
   backgroundColor: '#fff',
-  padding: '24px',
+  padding: '16px',
   borderRadius: '8px',
-  width: '90%',
-  maxWidth: '500px',
+  width: '95%',
+  maxWidth: '450px',
+  maxHeight: '90vh',
+  overflowY: 'auto',
   textAlign: 'center',
   color: '#000',
   boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
