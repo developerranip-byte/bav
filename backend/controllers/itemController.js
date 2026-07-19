@@ -92,16 +92,26 @@ export const searchItems = async (req, res) => {
 export const createItem = async (req, res) => {
   
   const { name, categoryId, languageId, isbn = null, openingQty = 0, isActive = true } = req.body;
+  const itemIsbn = isbn && isbn.trim() !== '' ? isbn.trim() : null;
+
+  const [existing] = await pool.query(
+    'SELECT id FROM items WHERE name = ? AND (isbn = ? OR (isbn IS NULL AND ? IS NULL))',
+    [name, itemIsbn, itemIsbn]
+  );
+  if (existing.length > 0) {
+    return res.status(400).json({ message: 'An item with this name and ISBN already exists' });
+  }
+
   const [result] = await pool.query(
     'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, ?, ?)',
-    [name, categoryId || null, languageId || null, isbn || null, openingQty, isActive ? 1 : 0]
+    [name, categoryId || null, languageId || null, itemIsbn, openingQty, isActive ? 1 : 0]
   );
   res.status(201).json({
     id: result.insertId,
     name,
     categoryId,
     languageId,
-    isbn,
+    isbn: itemIsbn,
     openingQty,
     isActive,
   });
@@ -111,11 +121,21 @@ export const updateItem = async (req, res) => {
   
   const { id } = req.params;
   const { name, categoryId, languageId, isbn = null, openingQty = 0, isActive = true } = req.body;
+  const itemIsbn = isbn && isbn.trim() !== '' ? isbn.trim() : null;
+
+  const [existing] = await pool.query(
+    'SELECT id FROM items WHERE name = ? AND (isbn = ? OR (isbn IS NULL AND ? IS NULL)) AND id != ?',
+    [name, itemIsbn, itemIsbn, id]
+  );
+  if (existing.length > 0) {
+    return res.status(400).json({ message: 'An item with this name and ISBN already exists' });
+  }
+
   await pool.query(
     'UPDATE items SET name = ?, categoryId = ?, languageId = ?, isbn = ?, openingQty = ?, isActive = ? WHERE id = ?',
-    [name, categoryId || null, languageId || null, isbn || null, openingQty, isActive ? 1 : 0, id]
+    [name, categoryId || null, languageId || null, itemIsbn, openingQty, isActive ? 1 : 0, id]
   );
-  res.json({ id: Number(id), name, categoryId, languageId, isbn, openingQty, isActive });
+  res.json({ id: Number(id), name, categoryId, languageId, isbn: itemIsbn, openingQty, isActive });
 };
 
 export const deleteItem = async (req, res) => {
@@ -264,6 +284,7 @@ export const importItems = async (req, res) => {
 
       let isbn = headers['ISBN'] ? row.getCell(headers['ISBN']).value : null;
       if (isbn && typeof isbn === 'object') isbn = isbn.result || isbn.text;
+      isbn = isbn && isbn.toString().trim() !== '' ? isbn.toString().trim() : null;
 
       const categoryId = categoryMap[categoryName] || null;
       const languageId = languageMap[languageName] || null;
@@ -278,10 +299,21 @@ export const importItems = async (req, res) => {
           [name, categoryId, languageId, isbn, itemId]
         );
       } else {
-        await pool.query(
-          'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, 0, 1)',
-          [name, categoryId, languageId, isbn]
+        const [existing] = await pool.query(
+          'SELECT id FROM items WHERE name = ? AND (isbn = ? OR (isbn IS NULL AND ? IS NULL))',
+          [name, isbn, isbn]
         );
+        if (existing.length > 0) {
+          await pool.query(
+            'UPDATE items SET categoryId = ?, languageId = ? WHERE id = ?',
+            [categoryId, languageId, existing[0].id]
+          );
+        } else {
+          await pool.query(
+            'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, 0, 1)',
+            [name, categoryId, languageId, isbn]
+          );
+        }
       }
       importedCount++;
     }

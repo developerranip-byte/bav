@@ -132,7 +132,6 @@ function ReportMaster({ setToast }) {
                 <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Item{renderSortIcon('name')}</th>
                 <th onClick={() => handleSort('categoryName')} style={{ cursor: 'pointer' }}>Category{renderSortIcon('categoryName')}</th>
                 <th onClick={() => handleSort('languageName')} style={{ cursor: 'pointer' }}>Language{renderSortIcon('languageName')}</th>
-                <th onClick={() => handleSort('openingQty')} style={{ cursor: 'pointer' }}>Opening Qty{renderSortIcon('openingQty')}</th>
                 <th onClick={() => handleSort('totalPurchased')} style={{ cursor: 'pointer' }}>Total Stock{renderSortIcon('totalPurchased')}</th>
                 <th onClick={() => handleSort('totalSold')} style={{ cursor: 'pointer' }}>Total Sold{renderSortIcon('totalSold')}</th>
                 <th onClick={() => handleSort('currentQuantity')} style={{ cursor: 'pointer' }}>Current Qty{renderSortIcon('currentQuantity')}</th>
@@ -147,7 +146,6 @@ function ReportMaster({ setToast }) {
                   <td>{item.name}</td>
                   <td>{item.categoryName || '-'}</td>
                   <td>{item.languageName || '-'}</td>
-                  <td>{item.openingQty}</td>
                   <td>{item.totalPurchased}</td>
                   <td>{item.totalSold}</td>
                   <td>{item.currentQuantity}</td>
