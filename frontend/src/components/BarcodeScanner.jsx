@@ -44,7 +44,7 @@ const BarcodeScanner = ({ onScan, onClose }) => {
         <style>{`
           #reader { border: none !important; }
           #reader__dashboard_section_csr span { display: block; margin-bottom: 8px; color: #333; }
-          #reader button { padding: 8px 16px; background-color: #2563eb; color: white; border: none; border-radius: 4px; margin: 4px; cursor: pointer; font-size: 14px; }
+          #reader button { width: auto !important; padding: 8px 16px; background-color: #2563eb; color: white; border: none; border-radius: 4px; margin: 4px; cursor: pointer; font-size: 14px; }
           #reader select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; max-width: 100%; margin-bottom: 8px; width: 100%; font-size: 14px; }
           #reader video { border-radius: 8px; width: 100% !important; max-height: 40vh; object-fit: cover; }
         `}</style>

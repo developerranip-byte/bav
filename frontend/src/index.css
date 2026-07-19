@@ -335,7 +335,7 @@ textarea {
     width: 100%;
   }
 
-  button:not(.logout-btn) {
+  button:not(.logout-btn):not(.icon-btn):not(.auto-width-btn) {
     width: 100%;
   }
 
