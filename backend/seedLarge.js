@@ -2,7 +2,7 @@ import 'dotenv/config';
 import mysql from 'mysql2/promise';
 
 const seedLarge = async () => {
-  const dbName = process.env.DB_NAME || 'bavdb';
+  const dbName = process.env.DB_NAME || 'bav_db';
   console.log(`Connecting to database "${dbName}" at ${process.env.DB_HOST || 'localhost'}...`);
 
   const connection = await mysql.createConnection({

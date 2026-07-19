@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise';
 import bcrypt from 'bcrypt';
 
 const seedUsers = async () => {
-  const dbName = process.env.DB_NAME || 'bavdb';
+  const dbName = process.env.DB_NAME || 'bav_db';
   console.log(`Connecting to database "${dbName}" at ${process.env.DB_HOST || 'localhost'}...`);
 
   const connection = await mysql.createConnection({
@@ -24,14 +24,14 @@ const seedUsers = async () => {
     const hashedUser = await bcrypt.hash('user', 10);
 
     const users = [
-      ['superadmin', hashedSuperAdmin, 'super_admin', 1],
-      ['admin', hashedAdmin, 'admin', 1],
-      ['testuser', hashedUser, 'user', 1]
+      ['superadmin', hashedSuperAdmin, 'super_admin', 1, null],
+      ['admin', hashedAdmin, 'admin', 1, null],
+      ['testuser', hashedUser, 'user', 1, null]
     ];
 
     for (const u of users) {
       await connection.query(
-        'INSERT INTO users (username, password, userType, isActive) VALUES (?, ?, ?, ?)',
+        'INSERT INTO users (username, password, userType, isActive, modules) VALUES (?, ?, ?, ?, ?)',
         u
       );
     }
