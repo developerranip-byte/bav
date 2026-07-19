@@ -9,8 +9,9 @@ const seedUsers = async () => {
 
   try {
     console.log('Clearing existing data from users table...');
-    // We don't disable foreign key checks here since 'users' doesn't have foreign keys pointing to it that would block truncation
+    await connection.query('SET FOREIGN_KEY_CHECKS = 0');
     await connection.query('TRUNCATE TABLE users');
+    await connection.query('SET FOREIGN_KEY_CHECKS = 1');
     
     console.log('Inserting default users...');
     const hashedSuperAdmin = await bcrypt.hash('superadmin', 10);
