@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
+import BarcodeScanner from './BarcodeScanner';
 
 function ItemsMaster({ setToast }) {
   const [itemsData, setItemsData] = useState({ data: [], page: 1, totalPages: 1 });
@@ -17,6 +18,7 @@ function ItemsMaster({ setToast }) {
   const [filters, setFilters] = useState({ search: '', categoryId: '', languageId: '' });
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [errors, setErrors] = useState({});
+  const [showScanner, setShowScanner] = useState(false);
 
   const token = localStorage.getItem('bav_auth_token');
   const headers = () => createAuthHeaders(token);
@@ -261,11 +263,22 @@ function ItemsMaster({ setToast }) {
             {errors.name && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.name}</div>}
 
             <label className="field-label">ISBN</label>
-            <input
-              placeholder="Enter ISBN"
-              value={itemForm.isbn}
-              onChange={(e) => setItemForm({ ...itemForm, isbn: e.target.value })}
-            />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                style={{ flex: 1, margin: 0 }}
+                placeholder="Enter ISBN or Scan"
+                value={itemForm.isbn}
+                onChange={(e) => setItemForm({ ...itemForm, isbn: e.target.value })}
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowScanner(true)}
+                style={{ background: '#2563eb', padding: '0 16px', margin: 0, display: 'flex', alignItems: 'center' }}
+                title="Scan Barcode"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+              </button>
+            </div>
             {errors.isbn && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.isbn}</div>}
 
             <label className="field-label">Item Category</label>
@@ -440,6 +453,17 @@ function ItemsMaster({ setToast }) {
           </div>
         </div>
       </section>
+      
+      {showScanner && (
+        <BarcodeScanner 
+          onScan={(isbn) => {
+            setItemForm((prev) => ({ ...prev, isbn }));
+            setShowScanner(false);
+            setToast({ type: 'success', message: 'Barcode scanned successfully!' });
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </section>
   );
 }
