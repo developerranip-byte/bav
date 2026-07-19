@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
+import Loader from './Loader';
 
 function CategoryMaster({ authHeaders, setToast }) {
   const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [categoryForm, setCategoryForm] = useState({ name: '', description: '', isActive: true });
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
@@ -11,6 +13,7 @@ function CategoryMaster({ authHeaders, setToast }) {
   const headers = () => createAuthHeaders(token);
 
   const fetchCategories = async () => {
+    setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE}/categories`, { headers: headers() });
       if (res.ok) {
@@ -18,6 +21,8 @@ function CategoryMaster({ authHeaders, setToast }) {
       }
     } catch (err) {
       console.error('Failed to fetch categories:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -122,16 +127,18 @@ function CategoryMaster({ authHeaders, setToast }) {
 
         <div className="card">
           <h3>Available Categories</h3>
-          <table className="data-table" style={{ width: '100%' }}>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div className="loading-state">
+            {isLoading && <Loader overlay />}
+            <table className="data-table" style={{ width: '100%' }}>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
               {categories.map((category) => (
                 <tr key={category.id}>
                   <td>{category.name}</td>
@@ -156,6 +163,7 @@ function CategoryMaster({ authHeaders, setToast }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
     </section>

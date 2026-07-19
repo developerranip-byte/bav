@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
 import { CURRENCY_SYMBOL } from '../utils/config';
+import Loader from './Loader';
 
 function Dashboard({ authHeaders }) {
   const [stats, setStats] = useState({ languages: 0, categories: 0, items: 0 });
   const [todayStats, setTodayStats] = useState({ soldQty: 0, soldAmount: 0, purchasedQty: 0, purchasedAmount: 0 });
   const [weeklySales, setWeeklySales] = useState([]);
   const [weeklyPurchases, setWeeklyPurchases] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const token = localStorage.getItem('bav_auth_token');
   const headers = () => createAuthHeaders(token);
 
   useEffect(() => {
     const fetchStats = async () => {
+      setIsLoading(true);
       try {
         const res = await fetch(`${API_BASE}/dashboard/stats`, { headers: headers() });
         if (res.ok) {
@@ -24,11 +27,21 @@ function Dashboard({ authHeaders }) {
         }
       } catch (err) {
         console.error('Failed to fetch dashboard stats:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchStats();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: '60vh', position: 'relative' }}>
+        <Loader overlay />
+      </div>
+    );
+  }
 
   return (
     <>

@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
+import Loader from './Loader';
 
 function LanguageMaster({ setToast }) {
   const [languages, setLanguages] = useState([]);
   const [languageForm, setLanguageForm] = useState({ name: '', code: '', isActive: true });
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
+  const [isLoading, setIsLoading] = useState(true);
 
   const token = localStorage.getItem('bav_auth_token');
   const headers = () => createAuthHeaders(token);
 
   const fetchLanguages = async () => {
+    setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE}/languages`, { headers: headers() });
       if (res.ok) {
@@ -18,6 +22,8 @@ function LanguageMaster({ setToast }) {
       }
     } catch (err) {
       console.error('Failed to fetch languages:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -127,7 +133,9 @@ function LanguageMaster({ setToast }) {
 
         <div className="card">
           <h3>Available Languages</h3>
-          <table className="data-table" style={{ width: '100%' }}>
+          <div className="loading-state">
+            {isLoading && <Loader overlay />}
+            <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
                 <th>Name</th>
@@ -161,6 +169,7 @@ function LanguageMaster({ setToast }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
     </section>

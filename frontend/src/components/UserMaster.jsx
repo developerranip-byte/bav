@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE } from '../utils/api';
+import Loader from './Loader';
 
 const AVAILABLE_MODULES = [
   { id: 'dashboard', label: 'Main Dashboard' },
@@ -14,10 +15,12 @@ const AVAILABLE_MODULES = [
 
 function UserMaster({ authHeaders, setToast }) {
   const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [form, setForm] = useState({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [] });
   const [isEditing, setIsEditing] = useState(false);
 
   const fetchUsers = async () => {
+    setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE}/users`, { headers: authHeaders() });
       if (res.ok) {
@@ -27,6 +30,8 @@ function UserMaster({ authHeaders, setToast }) {
       }
     } catch (err) {
       setToast({ type: 'error', message: 'Network error' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -39,6 +44,7 @@ function UserMaster({ authHeaders, setToast }) {
     if (!form.username) return setToast({ type: 'error', message: 'Username is required' });
     if (!isEditing && !form.password) return setToast({ type: 'error', message: 'Password is required for new users' });
 
+    setIsLoading(true);
     try {
       const url = isEditing ? `${API_BASE}/users/${form.id}` : `${API_BASE}/users`;
       const method = isEditing ? 'PUT' : 'POST';
@@ -56,9 +62,11 @@ function UserMaster({ authHeaders, setToast }) {
       } else {
         const error = await res.json();
         setToast({ type: 'error', message: error.message || 'Error saving user' });
+        setIsLoading(false);
       }
     } catch (err) {
       setToast({ type: 'error', message: 'Network error' });
+      setIsLoading(false);
     }
   };
 
@@ -163,7 +171,9 @@ function UserMaster({ authHeaders, setToast }) {
 
         <div className="card" style={{ overflowX: 'auto' }}>
           <h3>System Users</h3>
-          <table className="data-table">
+          <div className="loading-state">
+            {isLoading && <Loader overlay />}
+            <table className="data-table">
             <thead>
               <tr>
                 <th>Username</th>
@@ -194,6 +204,7 @@ function UserMaster({ authHeaders, setToast }) {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
     </section>

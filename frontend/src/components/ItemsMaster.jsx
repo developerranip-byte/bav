@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
 import BarcodeScanner from './BarcodeScanner';
+import Loader from './Loader';
 
 function ItemsMaster({ setToast }) {
   const [itemsData, setItemsData] = useState({ data: [], page: 1, totalPages: 1 });
@@ -19,11 +20,13 @@ function ItemsMaster({ setToast }) {
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [errors, setErrors] = useState({});
   const [showScanner, setShowScanner] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const token = localStorage.getItem('bav_auth_token');
   const headers = () => createAuthHeaders(token);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
       const [itemRes, catRes, langRes] = await Promise.all([
         fetch(`${API_BASE}/items`, { headers: headers() }),
@@ -44,6 +47,8 @@ function ItemsMaster({ setToast }) {
       }
     } catch (err) {
       console.error('Failed to fetch data:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -52,6 +57,7 @@ function ItemsMaster({ setToast }) {
   }, []);
 
   const fetchItems = async (page = 1) => {
+    setIsLoading(true);
     try {
       const queryParams = new URLSearchParams({ page });
       if (filters.search) queryParams.append('search', filters.search);
@@ -66,6 +72,8 @@ function ItemsMaster({ setToast }) {
       if (res.ok) setItemsData(await res.json());
     } catch (err) {
       console.error('Failed to fetch items:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -367,7 +375,9 @@ function ItemsMaster({ setToast }) {
               )}
             </div>
           </div>
-          <table className="data-table" style={{ width: '100%' }}>
+          <div className="loading-state">
+            {isLoading && <Loader overlay />}
+            <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
                 <th style={{ width: '40px', textAlign: 'center' }}>
@@ -437,6 +447,7 @@ function ItemsMaster({ setToast }) {
               ))}
             </tbody>
           </table>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
             <button
               disabled={itemsData.page <= 1}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
 import { CURRENCY_SYMBOL } from '../utils/config';
+import Loader from './Loader';
 
 function ReportMaster({ setToast }) {
   const [reportsData, setReportsData] = useState({ data: [], page: 1, totalPages: 1 });
@@ -9,11 +10,14 @@ function ReportMaster({ setToast }) {
   const [languages, setLanguages] = useState([]);
   const [filters, setFilters] = useState({ search: '', categoryId: '', languageId: '' });
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const token = localStorage.getItem('bav_auth_token');
   const headers = () => createAuthHeaders(token);
 
   const fetchReports = async (page = 1) => {
+    setIsLoading(true);
     try {
       const queryParams = new URLSearchParams({ page });
       if (filters.search) queryParams.append('search', filters.search);
@@ -30,6 +34,8 @@ function ReportMaster({ setToast }) {
       }
     } catch (err) {
       console.error('Failed to fetch reports:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -70,6 +76,7 @@ function ReportMaster({ setToast }) {
 
   const handleHistory = async (itemId, type, page = 1) => {
     const endpoint = type === 'purchase' ? 'purchases' : 'sales';
+    setIsHistoryLoading(true);
     try {
       const res = await fetch(`${API_BASE}/reports/${itemId}/${endpoint}?page=${page}`, {
         headers: headers(),
@@ -86,6 +93,8 @@ function ReportMaster({ setToast }) {
       }
     } catch (err) {
       console.error('Failed to fetch history:', err);
+    } finally {
+      setIsHistoryLoading(false);
     }
   };
 
@@ -125,7 +134,9 @@ function ReportMaster({ setToast }) {
               <button onClick={() => { setFilters({ search: '', categoryId: '', languageId: '' }); setTimeout(() => fetchReports(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
             </div>
           </div>
-          <table className="data-table" style={{ width: '100%' }}>
+          <div className="loading-state">
+            {isLoading && <Loader overlay />}
+            <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
                 <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Item{renderSortIcon('name')}</th>
@@ -162,6 +173,7 @@ function ReportMaster({ setToast }) {
               ))}
             </tbody>
           </table>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
             <button
               disabled={reportsData.page <= 1}
@@ -184,7 +196,8 @@ function ReportMaster({ setToast }) {
         <div className="card">
           <h3>{history.type === 'purchase' ? 'Stock History' : history.type === 'sales' ? 'Sales History' : 'History'}</h3>
           {history.type ? (
-            <>
+            <div className="loading-state">
+              {isHistoryLoading && <Loader overlay />}
               <table className="data-table" style={{ width: '100%' }}>
                 <thead>
                   <tr>
@@ -225,7 +238,7 @@ function ReportMaster({ setToast }) {
                   Next
                 </button>
               </div>
-            </>
+            </div>
           ) : (
             <p>Select a report button to load history.</p>
           )}

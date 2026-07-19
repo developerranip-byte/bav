@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
+import Loader from './Loader';
 import { CURRENCY_SYMBOL } from '../utils/config';
 
 function PurchaseMaster({ setToast }) {
   const [items, setItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [purchasesData, setPurchasesData] = useState({ data: [], page: 1, totalPages: 1 });
   const [purchaseForm, setPurchaseForm] = useState({
     itemId: '',
@@ -23,6 +25,7 @@ function PurchaseMaster({ setToast }) {
   const activeItems = useMemo(() => (items.data || items).filter((item) => item.isActive), [items]);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
       const [itemRes, purchaseRes] = await Promise.all([
         fetch(`${API_BASE}/items`, { headers: headers() }),
@@ -36,7 +39,9 @@ function PurchaseMaster({ setToast }) {
       }
       if (purchaseRes.ok) setPurchasesData(await purchaseRes.json());
     } catch (err) {
-      console.error('Failed to fetch data:', err);
+      console.error('Failed to fetch initial data:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,6 +50,7 @@ function PurchaseMaster({ setToast }) {
   }, []);
 
   const fetchPurchases = async (page = 1) => {
+    setIsLoading(true);
     try {
       const queryParams = new URLSearchParams({ page });
       if (filters.itemId) queryParams.append('itemId', filters.itemId);
@@ -59,6 +65,8 @@ function PurchaseMaster({ setToast }) {
       if (res.ok) setPurchasesData(await res.json());
     } catch (err) {
       console.error('Failed to fetch purchases:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -335,7 +343,9 @@ function PurchaseMaster({ setToast }) {
               <button onClick={() => { setFilters({ itemId: '', startDate: '', endDate: '' }); setTimeout(() => fetchPurchases(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
             </div>
           </div>
-          <table className="data-table" style={{ width: '100%' }}>
+          <div className="loading-state">
+            {isLoading && <Loader overlay />}
+            <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
                 <th onClick={() => handleSort('itemName')} style={{ cursor: 'pointer' }}>Item{renderSortIcon('itemName')}</th>
@@ -365,6 +375,7 @@ function PurchaseMaster({ setToast }) {
               )}
             </tbody>
           </table>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
             <button
               disabled={purchasesData.page <= 1}

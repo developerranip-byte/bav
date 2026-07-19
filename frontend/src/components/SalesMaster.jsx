@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
+import Loader from './Loader';
 import { CURRENCY_SYMBOL } from '../utils/config';
 
 function SalesMaster({ setToast }) {
   const [items, setItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [salesData, setSalesData] = useState({ data: [], page: 1, totalPages: 1 });
   const [itemSearch, setItemSearch] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -23,6 +25,7 @@ function SalesMaster({ setToast }) {
   const activeItems = useMemo(() => (items.data || items).filter((item) => item.isActive), [items]);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
       const [itemRes, salesRes] = await Promise.all([
         fetch(`${API_BASE}/items`, { headers: headers() }),
@@ -36,7 +39,9 @@ function SalesMaster({ setToast }) {
       }
       if (salesRes.ok) setSalesData(await salesRes.json());
     } catch (err) {
-      console.error('Failed to fetch data:', err);
+      console.error('Failed to fetch initial data:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,6 +50,7 @@ function SalesMaster({ setToast }) {
   }, []);
 
   const fetchSales = async (page = 1) => {
+    setIsLoading(true);
     try {
       const queryParams = new URLSearchParams({ page });
       if (filters.itemId) queryParams.append('itemId', filters.itemId);
@@ -59,6 +65,8 @@ function SalesMaster({ setToast }) {
       if (res.ok) setSalesData(await res.json());
     } catch (err) {
       console.error('Failed to fetch sales:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -340,7 +348,9 @@ function SalesMaster({ setToast }) {
               <button onClick={() => { setFilters({ itemId: '', startDate: '', endDate: '' }); setTimeout(() => fetchSales(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
             </div>
           </div>
-          <table className="data-table" style={{ width: '100%' }}>
+          <div className="loading-state">
+            {isLoading && <Loader overlay />}
+            <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
                 <th onClick={() => handleSort('itemName')} style={{ cursor: 'pointer' }}>Item{renderSortIcon('itemName')}</th>
@@ -370,6 +380,7 @@ function SalesMaster({ setToast }) {
               )}
             </tbody>
           </table>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
             <button
               disabled={salesData.page <= 1}
