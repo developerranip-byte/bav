@@ -34,8 +34,7 @@ app.get('/api/init-db', async (req, res) => {
   }
 });
 
-// Seed API Endpoints
-app.use('/api/scripts', seedRoutes);
+
 
 app.use('/api/auth', authRoutes);
 
@@ -63,6 +62,17 @@ app.use('/api/sales', authMiddleware, salesRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+
+const superAdminMiddleware = (req, res, next) => {
+  if (req.user && req.user.userType === 'super_admin') {
+    next();
+  } else {
+    return res.status(403).json({ message: 'Forbidden: Super Admin access required' });
+  }
+};
+
+// Seed API Endpoints (Secured)
+app.use('/api/scripts', authMiddleware, superAdminMiddleware, seedRoutes);
 
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
