@@ -1,62 +1,43 @@
 import express from 'express';
-import { exec } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+import seed from '../seed.js';
+import seedLarge from '../seedLarge.js';
+import seedUsers from '../seedUsers.js';
+import truncateDatabase from '../truncate.js';
 
 const router = express.Router();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.join(__dirname, '..');
 
-const runScript = (scriptName, req, res) => {
-  const scriptPath = path.join(rootDir, scriptName);
-
-  if (!fs.existsSync(scriptPath)) {
-    return res.status(404).json({ message: `Script ${scriptName} not found` });
-  }
-
-  // Using cross-env or node directly. Just node works fine.
-  exec(`node ${scriptPath}`, { cwd: rootDir }, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing ${scriptName}:`, error);
-      return res.status(500).json({
-        message: `Error running ${scriptName}`,
-        error: error.message,
-        stderr
-      });
-    }
-    res.json({
-      message: `Successfully executed ${scriptName}`,
-      stdout
-    });
-  });
+const scripts = {
+  'seed.js': seed,
+  'seedLarge.js': seedLarge,
+  'seedUsers.js': seedUsers,
+  'truncate.js': truncateDatabase
 };
 
 router.get('/list', (req, res) => {
-  try {
-    const files = fs.readdirSync(rootDir);
-    const scripts = files.filter(f =>
-      f.endsWith('.js') &&
-      f !== 'server.js' &&
-      f !== 'db.js'
-    );
-    res.json(scripts);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to list scripts', error: err.message });
-  }
+  res.json(Object.keys(scripts));
 });
 
-// Dynamic route to run any JS script in the backend root directory
-router.get('/run/:scriptName', (req, res) => {
+router.get('/run/:scriptName', async (req, res) => {
   const { scriptName } = req.params;
-
-  // Security check: ensure it's a .js file and prevent directory traversal
-  if (!scriptName.endsWith('.js') || scriptName.includes('..') || scriptName.includes('/') || scriptName.includes('\\')) {
-    return res.status(400).json({ message: 'Invalid script name. Must be a .js file in the root directory.' });
+  const scriptFn = scripts[scriptName];
+  
+  if (!scriptFn) {
+    return res.status(404).json({ message: `Script ${scriptName} not found` });
   }
 
-  runScript(scriptName, req, res);
+  try {
+    await scriptFn();
+    res.json({
+      message: `Successfully executed ${scriptName}`,
+      stdout: 'Completed successfully.'
+    });
+  } catch (error) {
+    console.error(`Error executing ${scriptName}:`, error);
+    res.status(500).json({
+      message: `Error running ${scriptName}`,
+      error: error.message
+    });
+  }
 });
 
 export default router;

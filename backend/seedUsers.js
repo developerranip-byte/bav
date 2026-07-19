@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcrypt';
+import { fileURLToPath } from 'url';
 
 const seedUsers = async () => {
   const dbName = process.env.DB_NAME || 'bav_db';
@@ -45,10 +46,14 @@ const seedUsers = async () => {
 
   } catch (err) {
     console.error('Error seeding users:', err);
+    throw err;
   } finally {
     await connection.end();
-    process.exit(0);
   }
 };
 
-seedUsers();
+export default seedUsers;
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  seedUsers().then(() => process.exit(0)).catch(() => process.exit(1));
+}

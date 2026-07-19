@@ -44,10 +44,14 @@ const truncateDatabase = async () => {
     console.log('Successfully truncated all tables!');
   } catch (error) {
     console.error('Error truncating tables:', error);
+    throw error;
   } finally {
     await connection.end();
-    process.exit(0);
   }
 };
 
-truncateDatabase();
+export default truncateDatabase;
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  truncateDatabase().then(() => process.exit(0)).catch(() => process.exit(1));
+}

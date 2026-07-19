@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import mysql from 'mysql2/promise';
+import { fileURLToPath } from 'url';
 
 const seed = async () => {
   const dbName = process.env.DB_NAME || 'bav_db';
@@ -125,7 +126,11 @@ const seed = async () => {
   console.log('Database seeding completed successfully!');
 };
 
-seed().catch(err => {
-  console.error('Error seeding database:', err);
-  process.exit(1);
-});
+export default seed;
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  seed().then(() => process.exit(0)).catch(err => {
+    console.error('Error seeding database:', err);
+    process.exit(1);
+  });
+}
