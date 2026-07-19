@@ -20,8 +20,14 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
-    const modules = ROLE_MODULES[user.userType] || [];
-    
+    let modules = ROLE_MODULES[user.userType] || [];
+    if (user.modules) {
+      try {
+        modules = typeof user.modules === 'string' ? JSON.parse(user.modules) : user.modules;
+      } catch (e) {
+        console.error('Failed to parse user modules', e);
+      }
+    }
     const token = jwt.sign(
       { id: user.id, username: user.username, userType: user.userType, modules },
       JWT_SECRET,

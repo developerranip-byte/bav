@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   password VARCHAR(255) NOT NULL,
   userType VARCHAR(50) NOT NULL DEFAULT 'user',
   isActive TINYINT(1) NOT NULL DEFAULT 1,
+  modules JSON NULL,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -110,6 +111,7 @@ const initDB = async () => {
   };
 
   console.log("Applying column alterations...");
+  await ensureColumn('users', 'modules', 'modules JSON NULL');
   await ensureColumn('items', 'isbn', 'isbn VARCHAR(255)');
   await ensureColumn('languages', 'isActive', 'isActive TINYINT(1) NOT NULL DEFAULT 1');
   await ensureColumn('items', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');

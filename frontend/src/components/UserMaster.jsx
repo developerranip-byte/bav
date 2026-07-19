@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react';
 import { API_BASE } from '../utils/api';
 
+const AVAILABLE_MODULES = [
+  { id: 'dashboard', label: 'Main Dashboard' },
+  { id: 'languages', label: 'Language Master' },
+  { id: 'categories', label: 'Category Master' },
+  { id: 'items', label: 'Items Master' },
+  { id: 'purchase', label: 'Stock Master' },
+  { id: 'sales', label: 'Sales Master' },
+  { id: 'report', label: 'Report Master' },
+  { id: 'users', label: 'User Master' }
+];
+
 function UserMaster({ authHeaders, setToast }) {
   const [users, setUsers] = useState([]);
-  const [form, setForm] = useState({ id: null, username: '', password: '', userType: 'user', isActive: 1 });
+  const [form, setForm] = useState({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [] });
   const [isEditing, setIsEditing] = useState(false);
 
   const fetchUsers = async () => {
@@ -39,7 +50,7 @@ function UserMaster({ authHeaders, setToast }) {
 
       if (res.ok) {
         setToast({ type: 'success', message: `User ${isEditing ? 'updated' : 'created'} successfully` });
-        setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1 });
+        setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [] });
         setIsEditing(false);
         fetchUsers();
       } else {
@@ -52,12 +63,18 @@ function UserMaster({ authHeaders, setToast }) {
   };
 
   const editUser = (user) => {
-    setForm({ id: user.id, username: user.username, password: '', userType: user.userType, isActive: user.isActive });
+    let parsedModules = [];
+    if (user.modules) {
+      try {
+        parsedModules = typeof user.modules === 'string' ? JSON.parse(user.modules) : user.modules;
+      } catch(e) {}
+    }
+    setForm({ id: user.id, username: user.username, password: '', userType: user.userType, isActive: user.isActive, modules: parsedModules });
     setIsEditing(true);
   };
 
   const cancelEdit = () => {
-    setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1 });
+    setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [] });
     setIsEditing(false);
   };
 
@@ -108,6 +125,29 @@ function UserMaster({ authHeaders, setToast }) {
                 </select>
               </>
             )}
+
+            <label className="field-label" style={{ marginTop: '16px' }}>Custom Module Access (Optional)</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              {AVAILABLE_MODULES.map(mod => (
+                <label key={mod.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.modules.includes(mod.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setForm({ ...form, modules: [...form.modules, mod.id] });
+                      } else {
+                        setForm({ ...form, modules: form.modules.filter(m => m !== mod.id) });
+                      }
+                    }}
+                  />
+                  {mod.label}
+                </label>
+              ))}
+            </div>
+            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '-10px', marginBottom: '20px' }}>
+              If no modules are selected, the user will inherit default modules based on their role.
+            </p>
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="submit" style={{ flex: 1 }}>{isEditing ? 'Update User' : 'Create User'}</button>
