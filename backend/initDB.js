@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS sales (
 const initDB = async () => {
   console.log("Connecting to database...");
   const useSSL = process.env.DB_HOST && process.env.DB_HOST !== 'localhost';
-  
+
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 3306,
@@ -84,7 +84,7 @@ const initDB = async () => {
   console.log(`Creating database ${dbName} if not exists...`);
   await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   await connection.query(`USE \`${dbName}\``);
-  
+
   console.log("Running schema...");
   await connection.query(schema);
 

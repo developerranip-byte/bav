@@ -126,28 +126,32 @@ function UserMaster({ authHeaders, setToast }) {
               </>
             )}
 
-            <label className="field-label" style={{ marginTop: '16px' }}>Custom Module Access (Optional)</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-              {AVAILABLE_MODULES.map(mod => (
-                <label key={mod.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
-                  <input
-                    type="checkbox"
-                    checked={form.modules.includes(mod.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setForm({ ...form, modules: [...form.modules, mod.id] });
-                      } else {
-                        setForm({ ...form, modules: form.modules.filter(m => m !== mod.id) });
-                      }
-                    }}
-                  />
-                  {mod.label}
-                </label>
-              ))}
-            </div>
-            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '-10px', marginBottom: '20px' }}>
-              If no modules are selected, the user will inherit default modules based on their role.
-            </p>
+            {form.userType !== 'super_admin' && (
+              <>
+                <label className="field-label" style={{ marginTop: '16px' }}>Custom Module Access (Optional)</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  {AVAILABLE_MODULES.map(mod => (
+                    <label key={mod.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                      <input
+                        type="checkbox"
+                        checked={form.modules.includes(mod.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setForm({ ...form, modules: [...form.modules, mod.id] });
+                          } else {
+                            setForm({ ...form, modules: form.modules.filter(m => m !== mod.id) });
+                          }
+                        }}
+                      />
+                      {mod.label}
+                    </label>
+                  ))}
+                </div>
+                <p style={{ fontSize: '13px', color: '#64748b', marginTop: '-10px', marginBottom: '20px' }}>
+                  If no modules are selected, the user will inherit default modules based on their role.
+                </p>
+              </>
+            )}
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="submit" style={{ flex: 1 }}>{isEditing ? 'Update User' : 'Create User'}</button>
