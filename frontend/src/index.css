@@ -459,8 +459,3 @@ textarea {
 .loading-state {
   position: relative;
 }
-
-.loading-state .data-table {
-  opacity: 0.5;
-  pointer-events: none;
-}
