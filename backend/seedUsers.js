@@ -1,21 +1,11 @@
 import 'dotenv/config';
-import mysql from 'mysql2/promise';
+import pool from './db.js';
 import bcrypt from 'bcrypt';
 import { fileURLToPath } from 'url';
 
 const seedUsers = async () => {
-  const dbName = process.env.DB_NAME || 'bav_db';
-  console.log(`Connecting to database "${dbName}" at ${process.env.DB_HOST || 'localhost'}...`);
-
-  const useSSL = process.env.DB_HOST && process.env.DB_HOST !== 'localhost';
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: dbName,
-    ...(useSSL && { ssl: { rejectUnauthorized: false } })
-  });
+  console.log(`Starting to seed users...`);
+  const connection = pool;
 
   try {
     console.log('Clearing existing data from users table...');
@@ -47,13 +37,17 @@ const seedUsers = async () => {
   } catch (err) {
     console.error('Error seeding users:', err);
     throw err;
-  } finally {
-    await connection.end();
   }
 };
 
 export default seedUsers;
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  seedUsers().then(() => process.exit(0)).catch(() => process.exit(1));
+  seedUsers().then(async () => {
+    await pool.end();
+    process.exit(0);
+  }).catch(async () => {
+    await pool.end();
+    process.exit(1);
+  });
 }

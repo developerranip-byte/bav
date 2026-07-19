@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import pool from './db.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,13 +8,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const truncateDatabase = async () => {
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'bav_db',
-    multipleStatements: true,
-  });
+  const connection = await pool.getConnection();
 
   try {
     console.log('Connecting to database to truncate tables...');
@@ -45,13 +39,17 @@ const truncateDatabase = async () => {
   } catch (error) {
     console.error('Error truncating tables:', error);
     throw error;
-  } finally {
-    await connection.end();
   }
 };
 
 export default truncateDatabase;
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  truncateDatabase().then(() => process.exit(0)).catch(() => process.exit(1));
+  truncateDatabase().then(async () => {
+    await pool.end();
+    process.exit(0);
+  }).catch(async () => {
+    await pool.end();
+    process.exit(1);
+  });
 }

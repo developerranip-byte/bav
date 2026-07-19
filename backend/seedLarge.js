@@ -1,21 +1,10 @@
 import 'dotenv/config';
-import mysql from 'mysql2/promise';
+import pool from './db.js';
 import { fileURLToPath } from 'url';
 
 const seedLarge = async () => {
-  const dbName = process.env.DB_NAME || 'bav_db';
-  console.log(`Connecting to database "${dbName}" at ${process.env.DB_HOST || 'localhost'}...`);
-
-  const useSSL = process.env.DB_HOST && process.env.DB_HOST !== 'localhost';
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: dbName,
-    multipleStatements: true,
-    ...(useSSL && { ssl: { rejectUnauthorized: false } })
-  });
+  console.log(`Starting large database seeding...`);
+  const connection = pool;
 
   console.log('Clearing existing data from tables...');
   await connection.query('SET FOREIGN_KEY_CHECKS = 0');
@@ -90,15 +79,18 @@ const seedLarge = async () => {
   }
   await connection.query('INSERT INTO sales (itemId, quantity, salesPrice, salesDate, userId) VALUES ?', [sales]);
 
-  await connection.end();
   console.log('Database large seeding completed successfully!');
 };
 
 export default seedLarge;
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  seedLarge().then(() => process.exit(0)).catch(err => {
+  seedLarge().then(async () => {
+    await pool.end();
+    process.exit(0);
+  }).catch(async (err) => {
     console.error('Error seeding database:', err);
+    await pool.end();
     process.exit(1);
   });
 }
