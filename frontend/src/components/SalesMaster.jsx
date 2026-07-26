@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
 import Loader from './Loader';
+import BarcodeScanner from './BarcodeScanner';
 import { CURRENCY_SYMBOL } from '../utils/config';
 
 function SalesMaster({ setToast }) {
@@ -9,6 +10,7 @@ function SalesMaster({ setToast }) {
   const [salesData, setSalesData] = useState({ data: [], page: 1, totalPages: 1 });
   const [itemSearch, setItemSearch] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [showScanner, setShowScanner] = useState(false);
   const [filters, setFilters] = useState({ itemId: '', startDate: '', endDate: '' });
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [saleForm, setSaleForm] = useState({
@@ -240,7 +242,7 @@ function SalesMaster({ setToast }) {
               />
             </label>
           )}
-          <button onClick={handleExport} style={{ background: '#16a34a' }}>
+          <button onClick={handleExport}>
             Export Excel
           </button>
         </div>
@@ -251,11 +253,23 @@ function SalesMaster({ setToast }) {
           <h3>Add Sale</h3>
           <form onSubmit={handleSubmit}>
             <label className="field-label">Search item by name or ISBN</label>
-            <input
-              placeholder="Type item name or ISBN"
-              value={itemSearch}
-              onChange={(e) => setItemSearch(e.target.value)}
-            />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                style={{ flex: 1, margin: 0 }}
+                placeholder="Type item name or ISBN or Scan"
+                value={itemSearch}
+                onChange={(e) => setItemSearch(e.target.value)}
+              />
+              <button 
+                type="button" 
+                className="auto-width-btn"
+                onClick={() => setShowScanner(true)}
+                style={{ background: '#2563eb', padding: '0 16px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minHeight: '42px', width: 'auto' }}
+                title="Scan Barcode"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+              </button>
+            </div>
             <select
               value={saleForm.itemId}
               onChange={(e) => setSaleForm({ ...saleForm, itemId: Number(e.target.value) })}
@@ -398,6 +412,17 @@ function SalesMaster({ setToast }) {
           </div>
         </div>
       </section>
+      
+      {showScanner && (
+        <BarcodeScanner 
+          onScan={(isbn) => {
+            setItemSearch(isbn);
+            setShowScanner(false);
+            setToast({ type: 'success', message: 'Barcode scanned successfully!' });
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </section>
   );
 }

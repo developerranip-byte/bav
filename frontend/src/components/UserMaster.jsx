@@ -137,6 +137,21 @@ function UserMaster({ authHeaders, setToast }) {
               <>
                 <label className="field-label" style={{ marginTop: '16px' }}>Custom Module Access (Optional)</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+                    <input
+                      type="checkbox"
+                      checked={AVAILABLE_MODULES.length > 0 && form.modules.length === AVAILABLE_MODULES.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setForm({ ...form, modules: AVAILABLE_MODULES.map(m => m.id) });
+                        } else {
+                          setForm({ ...form, modules: [] });
+                        }
+                      }}
+                    />
+                    Select All
+                  </label>
+                  <div style={{ width: '2px', background: '#e2e8f0', margin: '0 4px', borderRadius: '2px' }}></div>
                   {AVAILABLE_MODULES.map(mod => (
                     <label key={mod.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
                       <input

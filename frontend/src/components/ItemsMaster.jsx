@@ -252,7 +252,7 @@ function ItemsMaster({ setToast }) {
               </label>
             </>
           )}
-          <button onClick={handleExport} style={{ background: '#16a34a' }}>
+          <button onClick={handleExport}>
             Export Excel
           </button>
         </div>

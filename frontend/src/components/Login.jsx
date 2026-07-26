@@ -19,7 +19,6 @@ function Login({ onLogin }) {
       <div className="page-header">
         <div>
           <h2>Admin Login</h2>
-          <span className="page-badge">auth</span>
         </div>
         <p>Use the default admin credentials to access the application.</p>
       </div>

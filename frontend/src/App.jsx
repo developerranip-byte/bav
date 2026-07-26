@@ -30,6 +30,13 @@ function App() {
   });
   const [userType, setUserType] = useState(localStorage.getItem('bav_user_type'));
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(authToken));
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navigateTo = (menu, path) => {
+    setActiveMenu(menu);
+    navigate(path);
+    setIsMobileMenuOpen(false);
+  };
 
   const authHeaders = () => createAuthHeaders(authToken);
 
@@ -130,52 +137,60 @@ function App() {
           {toast.message}
         </div>
       )}
-      <aside className="sidebar">
+      
+      {isMobileMenuOpen && (
+        <div 
+          className="sidebar-overlay" 
+          onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
+
+      <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         <h2>BAV Panel</h2>
         <p>Book Audio Video Management</p>
         <nav>
           {userModules.includes('dashboard') && (
-            <button className={activeMenu === 'dashboard' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('dashboard'); navigate('/'); }}>
+            <button className={activeMenu === 'dashboard' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('dashboard', '/')}>
               Dashboard
             </button>
           )}
           {userModules.includes('languages') && (
-            <button className={activeMenu === 'languages' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('languages'); navigate('/language'); }}>
+            <button className={activeMenu === 'languages' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('languages', '/language')}>
               Language Master
             </button>
           )}
           {userModules.includes('categories') && (
-            <button className={activeMenu === 'categories' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('categories'); navigate('/category'); }}>
+            <button className={activeMenu === 'categories' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('categories', '/category')}>
               Category Master
             </button>
           )}
           {userModules.includes('items') && (
-            <button className={activeMenu === 'items' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('items'); navigate('/items'); }}>
+            <button className={activeMenu === 'items' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('items', '/items')}>
               Items Master
             </button>
           )}
           {userModules.includes('purchase') && (
-            <button className={activeMenu === 'purchase' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('purchase'); navigate('/purchase'); }}>
+            <button className={activeMenu === 'purchase' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('purchase', '/purchase')}>
               Stock Master
             </button>
           )}
           {userModules.includes('sales') && (
-            <button className={activeMenu === 'sales' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('sales'); navigate('/sales'); }}>
+            <button className={activeMenu === 'sales' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('sales', '/sales')}>
               Sales Master
             </button>
           )}
           {userModules.includes('report') && (
-            <button className={activeMenu === 'report' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('report'); navigate('/report'); }}>
+            <button className={activeMenu === 'report' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('report', '/report')}>
               Report Master
             </button>
           )}
           {userModules.includes('users') && (
-            <button className={activeMenu === 'users' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('users'); navigate('/users'); }}>
+            <button className={activeMenu === 'users' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('users', '/users')}>
               User Master
             </button>
           )}
           {userType === 'super_admin' && (
-            <button className={activeMenu === 'seed' ? 'menu-btn active' : 'menu-btn'} onClick={() => { setActiveMenu('seed'); navigate('/seed'); }}>
+            <button className={activeMenu === 'seed' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('seed', '/seed')}>
               Seed Scripts
             </button>
           )}
@@ -184,9 +199,11 @@ function App() {
 
       <main className="main-content">
         <header className="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button className="mobile-menu-btn icon-btn" onClick={() => setIsMobileMenuOpen(true)}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
             <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Stock Master' : activeMenu === 'sales' ? 'Sales Master' : activeMenu === 'users' ? 'User Master' : activeMenu === 'seed' ? 'Seed Scripts' : 'Report Master'}</h1>
-            <p>Organize your library with a modern control panel.</p>
           </div>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </header>

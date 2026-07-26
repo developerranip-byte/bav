@@ -23,7 +23,10 @@ export const login = async (req, res) => {
     let modules = ROLE_MODULES[user.userType] || [];
     if (user.modules && user.userType !== 'super_admin') {
       try {
-        modules = typeof user.modules === 'string' ? JSON.parse(user.modules) : user.modules;
+        const parsedModules = typeof user.modules === 'string' ? JSON.parse(user.modules) : user.modules;
+        if (Array.isArray(parsedModules) && parsedModules.length > 0) {
+          modules = parsedModules;
+        }
       } catch (e) {
         console.error('Failed to parse user modules', e);
       }

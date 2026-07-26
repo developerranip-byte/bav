@@ -3,40 +3,51 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const BarcodeScanner = ({ onScan, onClose }) => {
   const scannerRef = useRef(null);
+  const onScanRef = useRef(onScan);
 
   useEffect(() => {
-    // Initialize the scanner
-    const scanner = new Html5QrcodeScanner(
-      "reader",
-      { 
-        fps: 10, 
-        qrbox: { width: 250, height: 100 },
-        supportedScanTypes: [0] // 0 corresponds to html5QrcodeSupportedFormats for 1D/2D
-      },
-      false
-    );
+    onScanRef.current = onScan;
+  }, [onScan]);
 
-    scanner.render(
-      (decodedText) => {
-        // Stop scanning and call the callback
-        scanner.clear();
-        onScan(decodedText);
-      },
-      (error) => {
-        // Ignore continuous scanning errors
-      }
-    );
+  useEffect(() => {
+    let isMounted = true;
+    let scanner = null;
 
-    scannerRef.current = scanner;
+    const initTimer = setTimeout(() => {
+      if (!isMounted) return;
+
+      scanner = new Html5QrcodeScanner(
+        "reader",
+        { 
+          fps: 10, 
+          qrbox: { width: 250, height: 100 },
+          supportedScanTypes: [0] // 1D/2D barcodes
+        },
+        false
+      );
+
+      scanner.render(
+        (decodedText) => {
+          if (onScanRef.current) {
+            onScanRef.current(decodedText);
+          }
+        },
+        (error) => {
+          // Ignore continuous scanning errors
+        }
+      );
+    }, 50); // Small delay to allow Strict Mode to unmount before init
 
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(error => {
+      isMounted = false;
+      clearTimeout(initTimer);
+      if (scanner) {
+        scanner.clear().catch(error => {
           console.error("Failed to clear html5QrcodeScanner. ", error);
         });
       }
     };
-  }, [onScan]);
+  }, []);
 
   return (
     <div style={modalStyle}>

@@ -89,7 +89,6 @@ function LanguageMaster({ setToast }) {
       <div className="page-header">
         <div>
           <h2>Language Master</h2>
-          <span className="page-badge">language_master</span>
         </div>
         <p>Maintain language information and quick access from this page.</p>
       </div>
