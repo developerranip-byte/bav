@@ -1,6 +1,19 @@
 import pool from '../db.js';
 export const getDashboardStats = async (req, res) => {
-  
+  const { centerIds } = req.query;
+  let centerFilterS = '';
+  let centerFilterP = '';
+  let qParams = [];
+
+  if (centerIds) {
+    const ids = centerIds.split(',').map(id => Number(id)).filter(id => !isNaN(id));
+    if (ids.length > 0) {
+      const placeholders = ids.map(() => '?').join(',');
+      centerFilterS = `AND centerId IN (${placeholders})`;
+      centerFilterP = `AND centerId IN (${placeholders})`;
+      qParams = ids;
+    }
+  }
 
   try {
     // 1. Stats Counts
@@ -13,15 +26,15 @@ export const getDashboardStats = async (req, res) => {
       SELECT COALESCE(SUM(quantity), 0) AS soldQty, 
              COALESCE(SUM(salesPrice), 0) AS soldAmount 
       FROM sales 
-      WHERE DATE(salesDate) = CURRENT_DATE()
-    `);
+      WHERE DATE(salesDate) = CURRENT_DATE() ${centerFilterS}
+    `, qParams);
 
     const [[purchasesToday]] = await pool.query(`
       SELECT COALESCE(SUM(quantity), 0) AS purchasedQty, 
              COALESCE(SUM(quantity * amount), 0) AS purchasedAmount 
       FROM purchases 
-      WHERE DATE(purchaseDate) = CURRENT_DATE()
-    `);
+      WHERE DATE(purchaseDate) = CURRENT_DATE() ${centerFilterP}
+    `, qParams);
 
     // 3. Weekly History
     const [weeklySales] = await pool.query(`
@@ -31,9 +44,9 @@ export const getDashboardStats = async (req, res) => {
       FROM sales s 
       LEFT JOIN items i ON s.itemId = i.id 
       LEFT JOIN users u ON s.userId = u.id 
-      WHERE s.salesDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) 
+      WHERE s.salesDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) ${centerFilterS.replace(/centerId/g, 's.centerId')}
       ORDER BY s.salesDate DESC
-    `);
+    `, qParams);
 
     const [weeklyPurchases] = await pool.query(`
       SELECT p.id, p.quantity, p.purchaseDate, 
@@ -42,9 +55,9 @@ export const getDashboardStats = async (req, res) => {
       FROM purchases p 
       LEFT JOIN items i ON p.itemId = i.id 
       LEFT JOIN users u ON p.userId = u.id 
-      WHERE p.purchaseDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) 
+      WHERE p.purchaseDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) ${centerFilterP.replace(/centerId/g, 'p.centerId')}
       ORDER BY p.purchaseDate DESC
-    `);
+    `, qParams);
 
     res.json({
       stats: { languages, categories, items },

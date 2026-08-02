@@ -15,18 +15,27 @@ const AVAILABLE_MODULES = [
 
 function UserMaster({ authHeaders, setToast }) {
   const [users, setUsers] = useState([]);
+  const [availableCenters, setAvailableCenters] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [form, setForm] = useState({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [] });
+  const [form, setForm] = useState({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [], centers: [] });
   const [isEditing, setIsEditing] = useState(false);
 
-  const fetchUsers = async () => {
+  const fetchUsersAndCenters = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/users`, { headers: authHeaders() });
-      if (res.ok) {
-        setUsers(await res.json());
+      const [usersRes, centersRes] = await Promise.all([
+        fetch(`${API_BASE}/users`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/centers`, { headers: authHeaders() })
+      ]);
+      
+      if (usersRes.ok) {
+        setUsers(await usersRes.json());
       } else {
         setToast({ type: 'error', message: 'Failed to fetch users (Access Denied?)' });
+      }
+
+      if (centersRes.ok) {
+        setAvailableCenters(await centersRes.json());
       }
     } catch (err) {
       setToast({ type: 'error', message: 'Network error' });
@@ -36,7 +45,7 @@ function UserMaster({ authHeaders, setToast }) {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsersAndCenters();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -56,9 +65,9 @@ function UserMaster({ authHeaders, setToast }) {
 
       if (res.ok) {
         setToast({ type: 'success', message: `User ${isEditing ? 'updated' : 'created'} successfully` });
-        setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [] });
+        setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [], centers: [] });
         setIsEditing(false);
-        fetchUsers();
+        fetchUsersAndCenters();
       } else {
         const error = await res.json();
         setToast({ type: 'error', message: error.message || 'Error saving user' });
@@ -77,12 +86,18 @@ function UserMaster({ authHeaders, setToast }) {
         parsedModules = typeof user.modules === 'string' ? JSON.parse(user.modules) : user.modules;
       } catch(e) {}
     }
-    setForm({ id: user.id, username: user.username, password: '', userType: user.userType, isActive: user.isActive, modules: parsedModules });
+    let parsedCenters = [];
+    if (user.centers) {
+      try {
+        parsedCenters = typeof user.centers === 'string' ? JSON.parse(user.centers) : user.centers;
+      } catch(e) {}
+    }
+    setForm({ id: user.id, username: user.username, password: '', userType: user.userType, isActive: user.isActive, modules: parsedModules, centers: parsedCenters });
     setIsEditing(true);
   };
 
   const cancelEdit = () => {
-    setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [] });
+    setForm({ id: null, username: '', password: '', userType: 'user', isActive: 1, modules: [], centers: [] });
     setIsEditing(false);
   };
 
@@ -174,6 +189,41 @@ function UserMaster({ authHeaders, setToast }) {
                 </p>
               </>
             )}
+
+            <label className="field-label" style={{ marginTop: '16px' }}>Center Assignment</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+                <input
+                  type="checkbox"
+                  checked={availableCenters.length > 0 && form.centers?.length === availableCenters.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setForm({ ...form, centers: availableCenters.map(c => c.id) });
+                    } else {
+                      setForm({ ...form, centers: [] });
+                    }
+                  }}
+                />
+                Select All
+              </label>
+              <div style={{ width: '2px', background: '#e2e8f0', margin: '0 4px', borderRadius: '2px' }}></div>
+              {availableCenters.map(center => (
+                <label key={center.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.centers?.includes(center.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setForm({ ...form, centers: [...(form.centers || []), center.id] });
+                      } else {
+                        setForm({ ...form, centers: (form.centers || []).filter(c => c !== center.id) });
+                      }
+                    }}
+                  />
+                  {center.name}
+                </label>
+              ))}
+            </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="submit" style={{ flex: 1 }}>{isEditing ? 'Update User' : 'Create User'}</button>

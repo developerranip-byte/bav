@@ -7,10 +7,15 @@ export const getPurchases = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
 
-  const { itemId, startDate, endDate, sortBy, sortOrder } = req.query;
+  const { itemId, centerId, startDate, endDate, sortBy, sortOrder } = req.query;
 
   const conditions = [];
   const params = [];
+
+  if (centerId) {
+    conditions.push('p.centerId = ?');
+    params.push(centerId);
+  }
 
   if (itemId) {
     conditions.push('p.itemId = ?');
@@ -47,12 +52,13 @@ export const getPurchases = async (req, res) => {
     `SELECT p.id, p.purchaseDate, p.itemId, p.quantity, p.amount,
             (p.quantity * p.amount) AS totalAmount,
             i.name AS itemName, c.name AS categoryName, l.name AS languageName,
-            u.username AS addedBy
+            u.username AS addedBy, ctr.name AS centerName, p.centerId
       FROM purchases p
       LEFT JOIN items i ON p.itemId = i.id
       LEFT JOIN categories c ON i.categoryId = c.id
       LEFT JOIN languages l ON i.languageId = l.id
       LEFT JOIN users u ON p.userId = u.id
+      LEFT JOIN centers ctr ON p.centerId = ctr.id
       ${whereClause}
       ${orderByClause}
       LIMIT ? OFFSET ?`,
@@ -69,7 +75,11 @@ export const getPurchases = async (req, res) => {
 
 export const createPurchase = async (req, res) => {
   
-  const { itemId, quantity, amount, purchaseDate = new Date() } = req.body;
+  const { itemId, quantity, amount, purchaseDate = new Date(), centerId } = req.body;
+
+  if (!centerId) {
+    return res.status(400).json({ message: 'Center selection is required' });
+  }
 
   const [itemRows] = await pool.query('SELECT isActive FROM items WHERE id = ?', [itemId]);
   if (itemRows.length === 0 || itemRows[0].isActive !== 1) {
@@ -79,10 +89,10 @@ export const createPurchase = async (req, res) => {
   const userId = req.user ? req.user.id : null;
 
   const [result] = await pool.query(
-    'INSERT INTO purchases (itemId, quantity, amount, purchaseDate, userId) VALUES (?, ?, ?, ?, ?)',
-    [itemId, quantity, amount, purchaseDate, userId]
+    'INSERT INTO purchases (itemId, quantity, amount, purchaseDate, userId, centerId) VALUES (?, ?, ?, ?, ?, ?)',
+    [itemId, quantity, amount, purchaseDate, userId, centerId]
   );
-  res.status(201).json({ id: result.insertId, itemId, quantity, amount, purchaseDate, userId });
+  res.status(201).json({ id: result.insertId, itemId, quantity, amount, purchaseDate, userId, centerId });
 };
 
 export const exportPurchases = async (req, res) => {
@@ -99,9 +109,11 @@ export const exportPurchases = async (req, res) => {
       `SELECT p.id AS 'Stock ID', p.purchaseDate AS 'Date', p.itemId AS 'Item ID', 
               i.name AS 'Item Name', p.quantity AS 'Quantity', p.amount AS 'Price',
               (p.quantity * p.amount) AS 'Total Amount',
+              ctr.name AS 'Center Name',
               u.username AS 'Added By'
        FROM purchases p
        LEFT JOIN items i ON p.itemId = i.id
+       LEFT JOIN centers ctr ON p.centerId = ctr.id
        LEFT JOIN users u ON p.userId = u.id
        ORDER BY p.purchaseDate DESC, p.id DESC`
     );
@@ -113,6 +125,7 @@ export const exportPurchases = async (req, res) => {
       { header: 'Quantity', key: 'qty', width: 15 },
       { header: 'Price', key: 'price', width: 15 },
       { header: 'Total Amount', key: 'total', width: 15 },
+      { header: 'Center Name', key: 'centerName', width: 20 },
       { header: 'Added By', key: 'addedBy', width: 20 }
     ];
 
@@ -124,6 +137,7 @@ export const exportPurchases = async (req, res) => {
         qty: r['Quantity'],
         price: r['Price'],
         total: r['Total Amount'],
+        centerName: r['Center Name'],
         addedBy: r['Added By']
       });
     });

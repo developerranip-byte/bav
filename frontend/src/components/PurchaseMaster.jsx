@@ -6,10 +6,12 @@ import { CURRENCY_SYMBOL } from '../utils/config';
 
 function PurchaseMaster({ setToast }) {
   const [items, setItems] = useState([]);
+  const [centers, setCenters] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [purchasesData, setPurchasesData] = useState({ data: [], page: 1, totalPages: 1 });
   const [purchaseForm, setPurchaseForm] = useState({
     itemId: '',
+    centerId: '',
     quantity: 1,
     amount: 0,
     purchaseDate: new Date().toISOString().slice(0, 10),
@@ -17,7 +19,7 @@ function PurchaseMaster({ setToast }) {
   const [itemSearch, setItemSearch] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showScanner, setShowScanner] = useState(false);
-  const [filters, setFilters] = useState({ itemId: '', startDate: '', endDate: '' });
+  const [filters, setFilters] = useState({ itemId: '', centerId: '', startDate: '', endDate: '' });
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [errors, setErrors] = useState({});
 
@@ -26,18 +28,44 @@ function PurchaseMaster({ setToast }) {
 
   const activeItems = useMemo(() => (items.data || items).filter((item) => item.isActive), [items]);
 
+  const userCenters = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('bav_user_centers') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
+  const userType = localStorage.getItem('bav_user_type');
+  const availableCenters = useMemo(() => {
+    if (userType === 'super_admin') return centers;
+    return centers.filter(c => userCenters.includes(c.id));
+  }, [centers, userCenters, userType]);
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [itemRes, purchaseRes] = await Promise.all([
+      const [itemRes, purchaseRes, centerRes] = await Promise.all([
         fetch(`${API_BASE}/items`, { headers: headers() }),
         fetch(`${API_BASE}/purchases`, { headers: headers() }),
+        fetch(`${API_BASE}/centers`, { headers: headers() }),
       ]);
 
       if (itemRes.ok) {
         const itemsData = await itemRes.json();
         setItems(itemsData);
         setPurchaseForm((prev) => ({ ...prev, itemId: itemsData.data?.[0]?.id || '' }));
+      }
+      if (centerRes.ok) {
+        const centersData = await centerRes.json();
+        setCenters(centersData);
+        if (centersData.length > 0) {
+          const uCenters = JSON.parse(localStorage.getItem('bav_user_centers') || '[]');
+          const uType = localStorage.getItem('bav_user_type');
+          const avail = uType === 'super_admin' ? centersData : centersData.filter(c => uCenters.includes(c.id));
+          if (avail.length > 0) {
+            setPurchaseForm((prev) => ({ ...prev, centerId: avail[0].id }));
+          }
+        }
       }
       if (purchaseRes.ok) setPurchasesData(await purchaseRes.json());
     } catch (err) {
@@ -56,6 +84,7 @@ function PurchaseMaster({ setToast }) {
     try {
       const queryParams = new URLSearchParams({ page });
       if (filters.itemId) queryParams.append('itemId', filters.itemId);
+      if (filters.centerId) queryParams.append('centerId', filters.centerId);
       if (filters.startDate) queryParams.append('startDate', filters.startDate);
       if (filters.endDate) queryParams.append('endDate', filters.endDate);
       if (sortConfig.key) {
@@ -128,6 +157,7 @@ function PurchaseMaster({ setToast }) {
     e.preventDefault();
     const nextErrors = {};
     if (!purchaseForm.itemId) nextErrors.itemId = 'Select an item';
+    if (!purchaseForm.centerId) nextErrors.centerId = 'Select a center';
     if (!purchaseForm.quantity || purchaseForm.quantity <= 0) nextErrors.quantity = 'Quantity must be greater than 0';
     if (!purchaseForm.amount || purchaseForm.amount <= 0) nextErrors.amount = 'Amount must be greater than 0';
     if (!purchaseForm.purchaseDate) nextErrors.purchaseDate = 'Purchase date is required';
@@ -148,6 +178,7 @@ function PurchaseMaster({ setToast }) {
         setToast({ type: 'success', message: 'Purchase recorded' });
         setPurchaseForm({
           itemId: items[0]?.id || '',
+          centerId: availableCenters[0]?.id || '',
           quantity: 1,
           amount: 0,
           purchaseDate: new Date().toISOString().slice(0, 10),
@@ -300,6 +331,20 @@ function PurchaseMaster({ setToast }) {
               </div>
             )}
 
+            <label className="field-label">Center</label>
+            <select
+              value={purchaseForm.centerId}
+              onChange={(e) => setPurchaseForm({ ...purchaseForm, centerId: Number(e.target.value) })}
+            >
+              <option value="">Select center</option>
+              {availableCenters.map((center) => (
+                <option key={center.id} value={center.id}>
+                  {center.name}
+                </option>
+              ))}
+            </select>
+            {errors.centerId && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.centerId}</div>}
+
             <label className="field-label">Stock Quantity</label>
             <input
               type="number"
@@ -345,6 +390,15 @@ function PurchaseMaster({ setToast }) {
               </select>
             </div>
             <div style={{ flex: 1, minWidth: '150px' }}>
+              <label className="field-label">Filter by Center</label>
+              <select value={filters.centerId} onChange={(e) => setFilters({ ...filters, centerId: e.target.value })}>
+                <option value="">All Centers</option>
+                {availableCenters.map((center) => (
+                  <option key={center.id} value={center.id}>{center.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: '150px' }}>
               <label className="field-label">Start Date</label>
               <input type="date" value={filters.startDate} max={new Date().toISOString().split('T')[0]} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
             </div>
@@ -354,7 +408,7 @@ function PurchaseMaster({ setToast }) {
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => fetchPurchases(1)} style={{ padding: '10px 16px' }}>Filter</button>
-              <button onClick={() => { setFilters({ itemId: '', startDate: '', endDate: '' }); setTimeout(() => fetchPurchases(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
+              <button onClick={() => { setFilters({ itemId: '', centerId: '', startDate: '', endDate: '' }); setTimeout(() => fetchPurchases(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
             </div>
           </div>
           <div className="loading-state">
@@ -365,6 +419,7 @@ function PurchaseMaster({ setToast }) {
                 <th onClick={() => handleSort('itemName')} style={{ cursor: 'pointer' }}>Item{renderSortIcon('itemName')}</th>
                 <th onClick={() => handleSort('quantity')} style={{ cursor: 'pointer' }}>Quantity{renderSortIcon('quantity')}</th>
                 <th onClick={() => handleSort('amount')} style={{ cursor: 'pointer' }}>Price{renderSortIcon('amount')}</th>
+                <th onClick={() => handleSort('centerName')} style={{ cursor: 'pointer' }}>Center{renderSortIcon('centerName')}</th>
                 <th onClick={() => handleSort('purchaseDate')} style={{ cursor: 'pointer' }}>Date{renderSortIcon('purchaseDate')}</th>
                 <th onClick={() => handleSort('addedBy')} style={{ cursor: 'pointer' }}>Added By{renderSortIcon('addedBy')}</th>
               </tr>
@@ -376,6 +431,7 @@ function PurchaseMaster({ setToast }) {
                     <td>{purchase.itemName || '-'}</td>
                     <td>{purchase.quantity}</td>
                     <td>{CURRENCY_SYMBOL}{Number(purchase.amount).toFixed(2)}</td>
+                    <td>{purchase.centerName || '-'}</td>
                     <td>{new Date(purchase.purchaseDate).toLocaleDateString()}</td>
                     <td>{purchase.addedBy || 'System'}</td>
                   </tr>

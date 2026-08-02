@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import CategoryMaster from './components/CategoryMaster';
+import CenterMaster from './components/CenterMaster';
 import ItemsMaster from './components/ItemsMaster';
 import LanguageMaster from './components/LanguageMaster';
 import PurchaseMaster from './components/PurchaseMaster';
@@ -28,6 +29,9 @@ function App() {
   const [userModules, setUserModules] = useState(() => {
     try { return JSON.parse(localStorage.getItem('bav_user_modules') || '[]'); } catch { return []; }
   });
+  const [userCenters, setUserCenters] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('bav_user_centers') || '[]'); } catch { return []; }
+  });
   const [userType, setUserType] = useState(localStorage.getItem('bav_user_type'));
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(authToken));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -51,10 +55,12 @@ function App() {
         const data = await res.json();
         setAuthToken(data.token);
         setUserModules(data.modules || []);
+        setUserCenters(data.centers || []);
         setUserType(data.userType);
         setIsAuthenticated(true);
         localStorage.setItem('bav_auth_token', data.token);
         localStorage.setItem('bav_user_modules', JSON.stringify(data.modules || []));
+        localStorage.setItem('bav_user_centers', JSON.stringify(data.centers || []));
         localStorage.setItem('bav_user_type', data.userType);
         setToast({ type: 'success', message: 'Logged in successfully' });
         navigate('/');
@@ -78,10 +84,12 @@ function App() {
     }
     setAuthToken(null);
     setUserModules([]);
+    setUserCenters([]);
     setUserType(null);
     setIsAuthenticated(false);
     localStorage.removeItem('bav_auth_token');
     localStorage.removeItem('bav_user_modules');
+    localStorage.removeItem('bav_user_centers');
     localStorage.removeItem('bav_user_type');
     setToast({ type: 'success', message: 'Logged out successfully' });
     navigate('/login');
@@ -98,6 +106,8 @@ function App() {
       setActiveMenu('languages');
     } else if (location.pathname === '/category') {
       setActiveMenu('categories');
+    } else if (location.pathname === '/centers') {
+      setActiveMenu('centers');
     } else if (location.pathname === '/items') {
       setActiveMenu('items');
     } else if (location.pathname === '/purchase') {
@@ -164,6 +174,11 @@ function App() {
               Category Master
             </button>
           )}
+          {userModules.includes('centers') && (
+            <button className={activeMenu === 'centers' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('centers', '/centers')}>
+              Center Master
+            </button>
+          )}
           {userModules.includes('items') && (
             <button className={activeMenu === 'items' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('items', '/items')}>
               Items Master
@@ -203,7 +218,7 @@ function App() {
             <button className="mobile-menu-btn icon-btn" onClick={() => setIsMobileMenuOpen(true)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
-            <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Stock Master' : activeMenu === 'sales' ? 'Sales Master' : activeMenu === 'users' ? 'User Master' : activeMenu === 'seed' ? 'Seed Scripts' : 'Report Master'}</h1>
+            <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'centers' ? 'Center Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Stock Master' : activeMenu === 'sales' ? 'Sales Master' : activeMenu === 'users' ? 'User Master' : activeMenu === 'seed' ? 'Seed Scripts' : 'Report Master'}</h1>
           </div>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </header>
@@ -211,6 +226,7 @@ function App() {
         <Routes>
           {userModules.includes('languages') && <Route path="/language" element={<LanguageMaster authHeaders={authHeaders} setToast={setToast} />} />}
           {userModules.includes('categories') && <Route path="/category" element={<CategoryMaster authHeaders={authHeaders} setToast={setToast} />} />}
+          {userModules.includes('centers') && <Route path="/centers" element={<CenterMaster setToast={setToast} />} />}
           {userModules.includes('items') && <Route path="/items" element={<ItemsMaster authHeaders={authHeaders} setToast={setToast} />} />}
           {userModules.includes('purchase') && <Route path="/purchase" element={<PurchaseMaster authHeaders={authHeaders} setToast={setToast} />} />}
           {userModules.includes('sales') && <Route path="/sales" element={<SalesMaster authHeaders={authHeaders} setToast={setToast} />} />}

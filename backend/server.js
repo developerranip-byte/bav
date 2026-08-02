@@ -4,6 +4,7 @@ import cors from 'cors';
 import pool from './db.js';
 import initDB from './initDB.js';
 import categoryRoutes from './routes/categoryRoutes.js';
+import centerRoutes from './routes/centerRoutes.js';
 import languageRoutes from './routes/languageRoutes.js';
 import itemRoutes from './routes/itemRoutes.js';
 import purchaseRoutes from './routes/purchaseRoutes.js';
@@ -55,6 +56,7 @@ const authMiddleware = (req, res, next) => {
 };
 
 app.use('/api/categories', authMiddleware, categoryRoutes);
+app.use('/api/centers', authMiddleware, centerRoutes);
 app.use('/api/languages', authMiddleware, languageRoutes);
 app.use('/api/items', authMiddleware, itemRoutes);
 app.use('/api/purchases', authMiddleware, purchaseRoutes);

@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   userType VARCHAR(50) NOT NULL DEFAULT 'user',
   isActive TINYINT(1) NOT NULL DEFAULT 1,
   modules JSON NULL,
+  centers JSON NULL,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -24,6 +25,14 @@ CREATE TABLE IF NOT EXISTS languages (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   code VARCHAR(50) NOT NULL,
+  isActive TINYINT(1) NOT NULL DEFAULT 1,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS centers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  location VARCHAR(255),
   isActive TINYINT(1) NOT NULL DEFAULT 1,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -49,9 +58,11 @@ CREATE TABLE IF NOT EXISTS purchases (
   totalpurchaseamount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   purchaseDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
   userId INT,
+  centerId INT,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE,
-  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (centerId) REFERENCES centers(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS sales (
@@ -61,9 +72,11 @@ CREATE TABLE IF NOT EXISTS sales (
   salesPrice DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   salesDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
   userId INT,
+  centerId INT,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE CASCADE,
-  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (centerId) REFERENCES centers(id) ON DELETE SET NULL
 );
 `;
 
@@ -112,6 +125,7 @@ const initDB = async () => {
 
   console.log("Applying column alterations...");
   await ensureColumn('users', 'modules', 'modules JSON NULL');
+  await ensureColumn('users', 'centers', 'centers JSON NULL');
   await ensureColumn('items', 'isbn', 'isbn VARCHAR(255)');
   await ensureColumn('languages', 'isActive', 'isActive TINYINT(1) NOT NULL DEFAULT 1');
   await ensureColumn('items', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
@@ -119,8 +133,11 @@ const initDB = async () => {
   await ensureColumn('purchases', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
   await ensureColumn('sales', 'updatedAt', 'updatedAt TIMESTAMP NULL DEFAULT NULL');
   await ensureColumn('sales', 'salesPrice', 'salesPrice DECIMAL(12,2) NOT NULL DEFAULT 0.00');
+  await ensureColumn('sales', 'salesPrice', 'salesPrice DECIMAL(12,2) NOT NULL DEFAULT 0.00');
   await ensureColumn('purchases', 'userId', 'userId INT, ADD CONSTRAINT fk_purchases_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL');
+  await ensureColumn('purchases', 'centerId', 'centerId INT, ADD CONSTRAINT fk_purchases_center FOREIGN KEY (centerId) REFERENCES centers(id) ON DELETE SET NULL');
   await ensureColumn('sales', 'userId', 'userId INT, ADD CONSTRAINT fk_sales_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL');
+  await ensureColumn('sales', 'centerId', 'centerId INT, ADD CONSTRAINT fk_sales_center FOREIGN KEY (centerId) REFERENCES centers(id) ON DELETE SET NULL');
   await dropColumnIfExists('sales', 'amount');
   await dropColumnIfExists('sales', 'customerName');
   await dropColumnIfExists('sales', 'customerPhone');

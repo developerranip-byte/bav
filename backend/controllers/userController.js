@@ -12,13 +12,13 @@ export const requireAdmin = (req, res, next) => {
 
 export const getUsers = async (req, res) => {
   
-  const [rows] = await pool.query('SELECT id, username, userType, isActive, modules, createdAt FROM users ORDER BY createdAt DESC');
+  const [rows] = await pool.query('SELECT id, username, userType, isActive, modules, centers, createdAt FROM users ORDER BY createdAt DESC');
   res.json(rows);
 };
 
 export const createUser = async (req, res) => {
   
-  const { username, password, userType, modules = [] } = req.body;
+  const { username, password, userType, modules = [], centers = [] } = req.body;
 
   if (!username || !password || !userType) {
     return res.status(400).json({ message: 'All fields are required' });
@@ -27,11 +27,12 @@ export const createUser = async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const modulesJson = JSON.stringify(modules);
+    const centersJson = JSON.stringify(centers);
     const [result] = await pool.query(
-      'INSERT INTO users (username, password, userType, modules) VALUES (?, ?, ?, ?)',
-      [username, hashedPassword, userType, modulesJson]
+      'INSERT INTO users (username, password, userType, modules, centers) VALUES (?, ?, ?, ?, ?)',
+      [username, hashedPassword, userType, modulesJson, centersJson]
     );
-    res.status(201).json({ id: result.insertId, username, userType, modules, isActive: 1 });
+    res.status(201).json({ id: result.insertId, username, userType, modules, centers, isActive: 1 });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       res.status(400).json({ message: 'Username already exists' });
@@ -44,7 +45,7 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   
   const { id } = req.params;
-  const { password, userType, isActive, modules } = req.body;
+  const { password, userType, isActive, modules, centers } = req.body;
 
   try {
     const [userRows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
@@ -74,6 +75,10 @@ export const updateUser = async (req, res) => {
     if (modules !== undefined) {
       query += 'modules = ?, ';
       params.push(JSON.stringify(modules));
+    }
+    if (centers !== undefined) {
+      query += 'centers = ?, ';
+      params.push(JSON.stringify(centers));
     }
 
     query = query.slice(0, -2) + ' WHERE id = ?';

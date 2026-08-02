@@ -278,8 +278,8 @@ function ItemsMaster({ setToast }) {
                 value={itemForm.isbn}
                 onChange={(e) => setItemForm({ ...itemForm, isbn: e.target.value })}
               />
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="auto-width-btn"
                 onClick={() => setShowScanner(true)}
                 style={{ background: '#2563eb', padding: '0 16px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minHeight: '42px', width: 'auto' }}
@@ -378,75 +378,75 @@ function ItemsMaster({ setToast }) {
           <div className="loading-state">
             {isLoading && <Loader overlay />}
             <table className="data-table" style={{ width: '100%' }}>
-            <thead>
-              <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>
-                  <input 
-                    type="checkbox"
-                    checked={itemsData.data.length > 0 && selectedIds.length === itemsData.data.length}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedIds(itemsData.data.map(item => item.id));
-                      } else {
-                        setSelectedIds([]);
-                      }
-                    }}
-                  />
-                </th>
-                <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Name{renderSortIcon('name')}</th>
-                <th onClick={() => handleSort('categoryName')} style={{ cursor: 'pointer' }}>Category{renderSortIcon('categoryName')}</th>
-                <th onClick={() => handleSort('languageName')} style={{ cursor: 'pointer' }}>Language{renderSortIcon('languageName')}</th>
-                <th onClick={() => handleSort('isbn')} style={{ cursor: 'pointer' }}>ISBN{renderSortIcon('isbn')}</th>
-                <th onClick={() => handleSort('isActive')} style={{ cursor: 'pointer' }}>Status{renderSortIcon('isActive')}</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {itemsData.data.map((item) => (
-                <tr key={item.id}>
-                  <td style={{ textAlign: 'center' }}>
-                    <input 
+              <thead>
+                <tr>
+                  <th style={{ width: '40px', textAlign: 'center' }}>
+                    <input
                       type="checkbox"
-                      checked={selectedIds.includes(item.id)}
+                      checked={itemsData.data.length > 0 && selectedIds.length === itemsData.data.length}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedIds(prev => [...prev, item.id]);
+                          setSelectedIds(itemsData.data.map(item => item.id));
                         } else {
-                          setSelectedIds(prev => prev.filter(id => id !== item.id));
+                          setSelectedIds([]);
                         }
                       }}
                     />
-                  </td>
-                  <td><strong>{item.name}</strong></td>
-                  <td>{findCategoryName(item.categoryId)}</td>
-                  <td>{findLanguageName(item.languageId)}</td>
-                  <td>{item.isbn || '-'}</td>
-                  <td>
-                    <span className={item.isActive ? 'status-pill active' : 'status-pill'}>
-                      {item.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="icon-btn" title="Edit" onClick={() => {
-                      setEditingId(item.id);
-                      setItemForm({
-                        name: item.name,
-                        categoryId: item.categoryId || categories[0]?.id || '',
-                        languageId: item.languageId || languages[0]?.id || '',
-                        isbn: item.isbn || '',
-                        isActive: !!item.isActive,
-                      });
-                    }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                    </button>
-                    <button className="icon-btn danger" title="Delete" onClick={() => handleDelete(item.id)}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    </button>
-                  </td>
+                  </th>
+                  <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Name{renderSortIcon('name')}</th>
+                  <th onClick={() => handleSort('categoryName')} style={{ cursor: 'pointer' }}>Category{renderSortIcon('categoryName')}</th>
+                  <th onClick={() => handleSort('languageName')} style={{ cursor: 'pointer' }}>Language{renderSortIcon('languageName')}</th>
+                  <th onClick={() => handleSort('isbn')} style={{ cursor: 'pointer' }}>ISBN{renderSortIcon('isbn')}</th>
+                  <th onClick={() => handleSort('isActive')} style={{ cursor: 'pointer' }}>Status{renderSortIcon('isActive')}</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {itemsData.data.map((item) => (
+                  <tr key={item.id}>
+                    <td style={{ textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(prev => [...prev, item.id]);
+                          } else {
+                            setSelectedIds(prev => prev.filter(id => id !== item.id));
+                          }
+                        }}
+                      />
+                    </td>
+                    <td><strong>{item.name}</strong></td>
+                    <td>{findCategoryName(item.categoryId)}</td>
+                    <td>{findLanguageName(item.languageId)}</td>
+                    <td>{item.isbn || '-'}</td>
+                    <td>
+                      <span className={item.isActive ? 'status-pill active' : 'status-pill'}>
+                        {item.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <button className="icon-btn" title="Edit" onClick={() => {
+                        setEditingId(item.id);
+                        setItemForm({
+                          name: item.name,
+                          categoryId: item.categoryId || categories[0]?.id || '',
+                          languageId: item.languageId || languages[0]?.id || '',
+                          isbn: item.isbn || '',
+                          isActive: !!item.isActive,
+                        });
+                      }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                      </button>
+                      <button className="icon-btn danger" title="Delete" onClick={() => handleDelete(item.id)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
             <button
@@ -465,9 +465,9 @@ function ItemsMaster({ setToast }) {
           </div>
         </div>
       </section>
-      
+
       {showScanner && (
-        <BarcodeScanner 
+        <BarcodeScanner
           onScan={(isbn) => {
             setItemForm((prev) => ({ ...prev, isbn }));
             setShowScanner(false);

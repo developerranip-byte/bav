@@ -31,13 +31,25 @@ export const login = async (req, res) => {
         console.error('Failed to parse user modules', e);
       }
     }
+    let userCenters = [];
+    if (user.centers) {
+      try {
+        const parsedCenters = typeof user.centers === 'string' ? JSON.parse(user.centers) : user.centers;
+        if (Array.isArray(parsedCenters)) {
+          userCenters = parsedCenters;
+        }
+      } catch (e) {
+        console.error('Failed to parse user centers', e);
+      }
+    }
+
     const token = jwt.sign(
-      { id: user.id, username: user.username, userType: user.userType, modules },
+      { id: user.id, username: user.username, userType: user.userType, modules, centers: userCenters },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    res.json({ token, user: user.username, userType: user.userType, modules });
+    res.json({ token, user: user.username, userType: user.userType, modules, centers: userCenters });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Internal server error' });

@@ -6,15 +6,17 @@ import { CURRENCY_SYMBOL } from '../utils/config';
 
 function SalesMaster({ setToast }) {
   const [items, setItems] = useState([]);
+  const [centers, setCenters] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [salesData, setSalesData] = useState({ data: [], page: 1, totalPages: 1 });
   const [itemSearch, setItemSearch] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showScanner, setShowScanner] = useState(false);
-  const [filters, setFilters] = useState({ itemId: '', startDate: '', endDate: '' });
+  const [filters, setFilters] = useState({ itemId: '', centerId: '', startDate: '', endDate: '' });
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [saleForm, setSaleForm] = useState({
     itemId: '',
+    centerId: '',
     quantity: 1,
     salesDate: new Date().toISOString().slice(0, 10),
     salesPrice: 0,
@@ -26,18 +28,44 @@ function SalesMaster({ setToast }) {
 
   const activeItems = useMemo(() => (items.data || items).filter((item) => item.isActive), [items]);
 
+  const userCenters = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('bav_user_centers') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
+  const userType = localStorage.getItem('bav_user_type');
+  const availableCenters = useMemo(() => {
+    if (userType === 'super_admin') return centers;
+    return centers.filter(c => userCenters.includes(c.id));
+  }, [centers, userCenters, userType]);
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [itemRes, salesRes] = await Promise.all([
+      const [itemRes, salesRes, centerRes] = await Promise.all([
         fetch(`${API_BASE}/items`, { headers: headers() }),
         fetch(`${API_BASE}/sales`, { headers: headers() }),
+        fetch(`${API_BASE}/centers`, { headers: headers() }),
       ]);
 
       if (itemRes.ok) {
         const itemsData = await itemRes.json();
         setItems(itemsData);
         setSaleForm((prev) => ({ ...prev, itemId: itemsData.data?.[0]?.id || '' }));
+      }
+      if (centerRes.ok) {
+        const centersData = await centerRes.json();
+        setCenters(centersData);
+        if (centersData.length > 0) {
+          const uCenters = JSON.parse(localStorage.getItem('bav_user_centers') || '[]');
+          const uType = localStorage.getItem('bav_user_type');
+          const avail = uType === 'super_admin' ? centersData : centersData.filter(c => uCenters.includes(c.id));
+          if (avail.length > 0) {
+            setSaleForm((prev) => ({ ...prev, centerId: avail[0].id }));
+          }
+        }
       }
       if (salesRes.ok) setSalesData(await salesRes.json());
     } catch (err) {
@@ -56,6 +84,7 @@ function SalesMaster({ setToast }) {
     try {
       const queryParams = new URLSearchParams({ page });
       if (filters.itemId) queryParams.append('itemId', filters.itemId);
+      if (filters.centerId) queryParams.append('centerId', filters.centerId);
       if (filters.startDate) queryParams.append('startDate', filters.startDate);
       if (filters.endDate) queryParams.append('endDate', filters.endDate);
       if (sortConfig.key) {
@@ -133,6 +162,7 @@ function SalesMaster({ setToast }) {
     e.preventDefault();
     const nextErrors = {};
     if (!saleForm.itemId) nextErrors.itemId = 'Select an item';
+    if (!saleForm.centerId) nextErrors.centerId = 'Select a center';
     if (!saleForm.quantity || Number(saleForm.quantity) <= 0) nextErrors.quantity = 'Quantity must be at least 1';
     if (!saleForm.salesDate) nextErrors.salesDate = 'Sales date is required';
     if (!saleForm.salesPrice || Number(saleForm.salesPrice) < 0) nextErrors.salesPrice = 'Sales price must be a non-negative number';
@@ -148,6 +178,7 @@ function SalesMaster({ setToast }) {
         headers: headers(),
         body: JSON.stringify({
           itemId: saleForm.itemId,
+          centerId: saleForm.centerId,
           quantity: Number(saleForm.quantity),
           salesDate: saleForm.salesDate,
           salesPrice: Number(saleForm.salesPrice),
@@ -159,6 +190,7 @@ function SalesMaster({ setToast }) {
         setToast({ type: 'success', message: 'Sale recorded' });
         setSaleForm({
           itemId: items[0]?.id || '',
+          centerId: availableCenters[0]?.id || '',
           quantity: 1,
           salesDate: new Date().toISOString().slice(0, 10),
           salesPrice: 0,
@@ -304,6 +336,20 @@ function SalesMaster({ setToast }) {
               </div>
             )}
 
+            <label className="field-label">Center</label>
+            <select
+              value={saleForm.centerId}
+              onChange={(e) => setSaleForm({ ...saleForm, centerId: Number(e.target.value) })}
+            >
+              <option value="">Select center</option>
+              {availableCenters.map((center) => (
+                <option key={center.id} value={center.id}>
+                  {center.name}
+                </option>
+              ))}
+            </select>
+            {errors.centerId && <div className="field-error" style={{ color: '#c00', marginTop: 6 }}>{errors.centerId}</div>}
+
             <label className="field-label">Sales Quantity</label>
             <input
               type="number"
@@ -350,6 +396,15 @@ function SalesMaster({ setToast }) {
               </select>
             </div>
             <div style={{ flex: 1, minWidth: '150px' }}>
+              <label className="field-label">Filter by Center</label>
+              <select value={filters.centerId} onChange={(e) => setFilters({ ...filters, centerId: e.target.value })}>
+                <option value="">All Centers</option>
+                {availableCenters.map((center) => (
+                  <option key={center.id} value={center.id}>{center.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: '150px' }}>
               <label className="field-label">Start Date</label>
               <input type="date" value={filters.startDate} max={new Date().toISOString().split('T')[0]} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
             </div>
@@ -359,7 +414,7 @@ function SalesMaster({ setToast }) {
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => fetchSales(1)} style={{ padding: '10px 16px' }}>Filter</button>
-              <button onClick={() => { setFilters({ itemId: '', startDate: '', endDate: '' }); setTimeout(() => fetchSales(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
+              <button onClick={() => { setFilters({ itemId: '', centerId: '', startDate: '', endDate: '' }); setTimeout(() => fetchSales(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
             </div>
           </div>
           <div className="loading-state">
@@ -370,6 +425,7 @@ function SalesMaster({ setToast }) {
                 <th onClick={() => handleSort('itemName')} style={{ cursor: 'pointer' }}>Item{renderSortIcon('itemName')}</th>
                 <th onClick={() => handleSort('quantity')} style={{ cursor: 'pointer' }}>Quantity{renderSortIcon('quantity')}</th>
                 <th onClick={() => handleSort('salesPrice')} style={{ cursor: 'pointer' }}>Total Amount{renderSortIcon('salesPrice')}</th>
+                <th onClick={() => handleSort('centerName')} style={{ cursor: 'pointer' }}>Center{renderSortIcon('centerName')}</th>
                 <th onClick={() => handleSort('salesDate')} style={{ cursor: 'pointer' }}>Date{renderSortIcon('salesDate')}</th>
                 <th onClick={() => handleSort('addedBy')} style={{ cursor: 'pointer' }}>Added By{renderSortIcon('addedBy')}</th>
               </tr>
@@ -381,6 +437,7 @@ function SalesMaster({ setToast }) {
                     <td>{sale.itemName || '-'}</td>
                     <td>{sale.quantity}</td>
                     <td>{CURRENCY_SYMBOL}{Number(sale?.totalAmount).toFixed(2)}</td>
+                    <td>{sale.centerName || '-'}</td>
                     <td>{new Date(sale.salesDate).toLocaleDateString()}</td>
                     <td>{sale.addedBy || 'System'}</td>
                   </tr>

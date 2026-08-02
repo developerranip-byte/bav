@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
 import { CURRENCY_SYMBOL } from '../utils/config';
 import Loader from './Loader';
@@ -9,15 +9,49 @@ function Dashboard({ authHeaders }) {
   const [weeklySales, setWeeklySales] = useState([]);
   const [weeklyPurchases, setWeeklyPurchases] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [centers, setCenters] = useState([]);
+  const [selectedCenters, setSelectedCenters] = useState([]);
 
   const token = localStorage.getItem('bav_auth_token');
   const headers = () => createAuthHeaders(token);
+
+  const userCenters = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('bav_user_centers') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
+  const userType = localStorage.getItem('bav_user_type');
+  const availableCenters = useMemo(() => {
+    if (userType === 'super_admin') return centers;
+    return centers.filter(c => userCenters.includes(c.id));
+  }, [centers, userCenters, userType]);
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const centerRes = await fetch(`${API_BASE}/centers`, { headers: headers() });
+        if (centerRes.ok) {
+          const centersData = await centerRes.json();
+          setCenters(centersData);
+        }
+      } catch (err) {
+        console.error('Failed to fetch centers:', err);
+      }
+    };
+    fetchInitialData();
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/dashboard/stats`, { headers: headers() });
+        let url = `${API_BASE}/dashboard/stats`;
+        if (selectedCenters.length > 0) {
+          url += `?centerIds=${selectedCenters.join(',')}`;
+        }
+        const res = await fetch(url, { headers: headers() });
         if (res.ok) {
           const data = await res.json();
           setStats(data.stats);
@@ -33,7 +67,7 @@ function Dashboard({ authHeaders }) {
     };
 
     fetchStats();
-  }, []);
+  }, [selectedCenters]);
 
   if (isLoading) {
     return (
@@ -45,6 +79,53 @@ function Dashboard({ authHeaders }) {
 
   return (
     <>
+      <section className="page-card" style={{ marginBottom: 20 }}>
+        <div className="page-header" style={{ marginBottom: 0 }}>
+          <div>
+            <h2>Dashboard</h2>
+            <p style={{ marginTop: 8 }}>Overview of system metrics and activities.</p>
+          </div>
+        </div>
+        {availableCenters.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <label className="field-label" style={{ marginBottom: 8 }}>Filter by Centers:</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedCenters.length === availableCenters.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedCenters(availableCenters.map(c => c.id));
+                    } else {
+                      setSelectedCenters([]);
+                    }
+                  }}
+                />
+                All Centers
+              </label>
+              <div style={{ width: '2px', background: '#cbd5e1', margin: '0 4px', borderRadius: '2px' }}></div>
+              {availableCenters.map(center => (
+                <label key={center.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCenters.includes(center.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedCenters([...selectedCenters, center.id]);
+                      } else {
+                        setSelectedCenters(selectedCenters.filter(id => id !== center.id));
+                      }
+                    }}
+                  />
+                  {center.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
       <section className="dashboard-grid">
         <article className="stats-card blue">
           <h3>Languages</h3>

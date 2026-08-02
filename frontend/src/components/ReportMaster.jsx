@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
 import { CURRENCY_SYMBOL } from '../utils/config';
 import Loader from './Loader';
@@ -8,13 +8,27 @@ function ReportMaster({ setToast }) {
   const [history, setHistory] = useState({ type: null, itemId: null, rows: [], page: 1, totalPages: 1 });
   const [categories, setCategories] = useState([]);
   const [languages, setLanguages] = useState([]);
-  const [filters, setFilters] = useState({ search: '', categoryId: '', languageId: '' });
+  const [centers, setCenters] = useState([]);
+  const [filters, setFilters] = useState({ search: '', categoryId: '', languageId: '', selectedCenters: [] });
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [isLoading, setIsLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const token = localStorage.getItem('bav_auth_token');
   const headers = () => createAuthHeaders(token);
+
+  const userCenters = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('bav_user_centers') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
+  const userType = localStorage.getItem('bav_user_type');
+  const availableCenters = useMemo(() => {
+    if (userType === 'super_admin') return centers;
+    return centers.filter(c => userCenters.includes(c.id));
+  }, [centers, userCenters, userType]);
 
   const fetchReports = async (page = 1) => {
     setIsLoading(true);
@@ -23,6 +37,9 @@ function ReportMaster({ setToast }) {
       if (filters.search) queryParams.append('search', filters.search);
       if (filters.categoryId) queryParams.append('categoryId', filters.categoryId);
       if (filters.languageId) queryParams.append('languageId', filters.languageId);
+      if (filters.selectedCenters && filters.selectedCenters.length > 0) {
+        queryParams.append('centerIds', filters.selectedCenters.join(','));
+      }
       if (sortConfig.key) {
         queryParams.append('sortBy', sortConfig.key);
         queryParams.append('sortOrder', sortConfig.direction);
@@ -58,12 +75,14 @@ function ReportMaster({ setToast }) {
 
   const fetchFiltersData = async () => {
     try {
-      const [catRes, langRes] = await Promise.all([
+      const [catRes, langRes, centerRes] = await Promise.all([
         fetch(`${API_BASE}/categories`, { headers: headers() }),
         fetch(`${API_BASE}/languages`, { headers: headers() }),
+        fetch(`${API_BASE}/centers`, { headers: headers() }),
       ]);
       if (catRes.ok) setCategories(await catRes.json());
       if (langRes.ok) setLanguages(await langRes.json());
+      if (centerRes.ok) setCenters(await centerRes.json());
     } catch (err) {
       console.error('Failed to fetch filters data:', err);
     }
@@ -78,7 +97,11 @@ function ReportMaster({ setToast }) {
     const endpoint = type === 'purchase' ? 'purchases' : 'sales';
     setIsHistoryLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/reports/${itemId}/${endpoint}?page=${page}`, {
+      const q = new URLSearchParams({ page });
+      if (filters.selectedCenters && filters.selectedCenters.length > 0) {
+        q.append('centerIds', filters.selectedCenters.join(','));
+      }
+      const res = await fetch(`${API_BASE}/reports/${itemId}/${endpoint}?${q.toString()}`, {
         headers: headers(),
       });
       if (res.ok) {
@@ -131,9 +154,47 @@ function ReportMaster({ setToast }) {
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => fetchReports(1)} style={{ padding: '10px 16px' }}>Filter</button>
-              <button onClick={() => { setFilters({ search: '', categoryId: '', languageId: '' }); setTimeout(() => fetchReports(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
+              <button onClick={() => { setFilters({ search: '', categoryId: '', languageId: '', selectedCenters: [] }); setTimeout(() => fetchReports(1), 0); }} style={{ padding: '10px 16px', background: '#64748b' }}>Clear</button>
             </div>
           </div>
+          {availableCenters.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <label className="field-label" style={{ marginBottom: 8 }}>Filter by Centers:</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                  <input
+                    type="checkbox"
+                    checked={filters.selectedCenters.length === availableCenters.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFilters({ ...filters, selectedCenters: availableCenters.map(c => c.id) });
+                      } else {
+                        setFilters({ ...filters, selectedCenters: [] });
+                      }
+                    }}
+                  />
+                  All Centers
+                </label>
+                <div style={{ width: '2px', background: '#cbd5e1', margin: '0 4px', borderRadius: '2px' }}></div>
+                {availableCenters.map(center => (
+                  <label key={center.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                    <input
+                      type="checkbox"
+                      checked={filters.selectedCenters.includes(center.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFilters({ ...filters, selectedCenters: [...filters.selectedCenters, center.id] });
+                        } else {
+                          setFilters({ ...filters, selectedCenters: filters.selectedCenters.filter(id => id !== center.id) });
+                        }
+                      }}
+                    />
+                    {center.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="loading-state">
             {isLoading && <Loader overlay />}
             <table className="data-table" style={{ width: '100%' }}>
@@ -204,6 +265,7 @@ function ReportMaster({ setToast }) {
                     <th>Date</th>
                     <th>Quantity</th>
                     {history.type !== 'purchase' && <th>Total Amount</th>}
+                    <th>Center</th>
                     <th>Added By</th>
                   </tr>
                 </thead>
@@ -218,6 +280,7 @@ function ReportMaster({ setToast }) {
                           {Number(row.totalAmount).toFixed(2)}
                         </td>
                       )}
+                      <td>{row.centerName || '-'}</td>
                       <td>{row.addedBy || 'System'}</td>
                     </tr>
                   ))}

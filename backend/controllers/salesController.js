@@ -6,10 +6,15 @@ export const getSales = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
 
-  const { itemId, startDate, endDate, sortBy, sortOrder } = req.query;
+  const { itemId, centerId, startDate, endDate, sortBy, sortOrder } = req.query;
 
   const conditions = [];
   const params = [];
+
+  if (centerId) {
+    conditions.push('s.centerId = ?');
+    params.push(centerId);
+  }
 
   if (itemId) {
     conditions.push('s.itemId = ?');
@@ -46,10 +51,11 @@ export const getSales = async (req, res) => {
     `SELECT s.id, s.itemId, s.quantity, s.salesPrice, s.salesDate,
             s.salesPrice AS totalAmount,
             i.name AS itemName,
-            u.username AS addedBy
+            u.username AS addedBy, ctr.name AS centerName, s.centerId
       FROM sales s
       LEFT JOIN items i ON s.itemId = i.id
       LEFT JOIN users u ON s.userId = u.id
+      LEFT JOIN centers ctr ON s.centerId = ctr.id
       ${whereClause}
       ${orderByClause}
       LIMIT ? OFFSET ?`,
@@ -66,7 +72,11 @@ export const getSales = async (req, res) => {
 
 export const createSale = async (req, res) => {
   
-  const { itemId, quantity = 1, salesPrice = 0.00, salesDate = new Date() } = req.body;
+  const { itemId, quantity = 1, salesPrice = 0.00, salesDate = new Date(), centerId } = req.body;
+
+  if (!centerId) {
+    return res.status(400).json({ message: 'Center selection is required' });
+  }
 
   if (!itemId || !Number(itemId)) {
     return res.status(400).json({ message: 'Item is required' });
@@ -84,38 +94,39 @@ export const createSale = async (req, res) => {
     return res.status(400).json({ message: 'Sale can only be recorded for an active item' });
   }
 
-  // Get opening quantity from items table
+  // Get opening quantity from items table (treated globally)
   const [openingRows] = await pool.query('SELECT openingQty FROM items WHERE id = ?', [itemId]);
   const openingQty = Number(openingRows[0]?.openingQty || 0);
 
-  // Get total purchased quantity from purchases table
+  // Get total purchased quantity from purchases table for this center
   const [purchaseRows] = await pool.query(
-    'SELECT COALESCE(SUM(quantity), 0) AS totalPurchased FROM purchases WHERE itemId = ?',
-    [itemId]
+    'SELECT COALESCE(SUM(quantity), 0) AS totalPurchased FROM purchases WHERE itemId = ? AND centerId = ?',
+    [itemId, centerId]
   );
   const purchasedQty = Number(purchaseRows[0]?.totalPurchased || 0);
 
-  // Get total sold quantity from sales table
+  // Get total sold quantity from sales table for this center
   const [salesRows] = await pool.query(
-    'SELECT COALESCE(SUM(quantity), 0) AS totalSold FROM sales WHERE itemId = ?',
-    [itemId]
+    'SELECT COALESCE(SUM(quantity), 0) AS totalSold FROM sales WHERE itemId = ? AND centerId = ?',
+    [itemId, centerId]
   );
   const soldQty = Number(salesRows[0]?.totalSold || 0);
 
-  // Calculate available quantity
+  // Calculate available quantity. We allow global openingQty + center purchases - center sales
+  // This is a simplification but allows existing global stock to be sold anywhere
   const available = openingQty + purchasedQty - soldQty;
   if (quantity > available) {
-    return res.status(400).json({ message: `Sales quantity cannot exceed available stock (${available})` });
+    return res.status(400).json({ message: `Sales quantity cannot exceed available stock in this center (${available})` });
   }
 
   const userId = req.user ? req.user.id : null;
 
   const [result] = await pool.query(
-    'INSERT INTO sales (itemId, quantity, salesPrice, salesDate, userId) VALUES (?, ?, ?, ?, ?)',
-    [itemId, quantity, salesPrice, salesDate, userId]
+    'INSERT INTO sales (itemId, quantity, salesPrice, salesDate, userId, centerId) VALUES (?, ?, ?, ?, ?, ?)',
+    [itemId, quantity, salesPrice, salesDate, userId, centerId]
   );
 
-  res.status(201).json({ id: result.insertId, itemId, quantity, salesPrice, salesDate, userId });
+  res.status(201).json({ id: result.insertId, itemId, quantity, salesPrice, salesDate, userId, centerId });
 };
 
 export const exportSales = async (req, res) => {
@@ -140,9 +151,11 @@ export const exportSales = async (req, res) => {
     const [rows] = await pool.query(
       `SELECT s.id AS 'Sale ID', s.salesDate AS 'Date', s.itemId AS 'Item ID', 
               i.name AS 'Item Name', s.quantity AS 'Quantity', s.salesPrice AS 'Price',
+              ctr.name AS 'Center Name',
               u.username AS 'Added By'
        FROM sales s
        LEFT JOIN items i ON s.itemId = i.id
+       LEFT JOIN centers ctr ON s.centerId = ctr.id
        LEFT JOIN users u ON s.userId = u.id
        ORDER BY s.salesDate DESC, s.id DESC`
     );
@@ -154,6 +167,7 @@ export const exportSales = async (req, res) => {
       { header: 'Quantity', key: 'qty', width: 15 },
       { header: 'Price', key: 'price', width: 15 },
       { header: 'Total Amount', key: 'total', width: 15 },
+      { header: 'Center Name', key: 'centerName', width: 20 },
       { header: 'Added By', key: 'addedBy', width: 20 }
     ];
 
@@ -164,7 +178,8 @@ export const exportSales = async (req, res) => {
         itemName: r['Item Name'],
         qty: r['Quantity'],
         price: r['Price'],
-        total: '',
+        total: r['Quantity'] * r['Price'],
+        centerName: r['Center Name'],
         addedBy: r['Added By']
       });
     });
