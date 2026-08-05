@@ -2,12 +2,21 @@ import { useEffect, useState, useMemo } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
 import { CURRENCY_SYMBOL } from '../utils/config';
 import Loader from './Loader';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function Dashboard({ authHeaders }) {
   const [stats, setStats] = useState({ languages: 0, categories: 0, items: 0 });
   const [todayStats, setTodayStats] = useState({ soldQty: 0, soldAmount: 0, purchasedQty: 0, purchasedAmount: 0 });
   const [weeklySales, setWeeklySales] = useState([]);
   const [weeklyPurchases, setWeeklyPurchases] = useState([]);
+  const [recentCountingEntries, setRecentCountingEntries] = useState([]);
+  const [countingStartDate, setCountingStartDate] = useState('');
+  const [countingEndDate, setCountingEndDate] = useState('');
+  const [graphData, setGraphData] = useState([]);
+  const [graphGroupBy, setGraphGroupBy] = useState('date');
+  const [graphMetric, setGraphMetric] = useState('total');
+  const [graphSelectedColumns, setGraphSelectedColumns] = useState(['totalSangat']);
+  const [isGraphLoading, setIsGraphLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [centers, setCenters] = useState([]);
   const [selectedCenters, setSelectedCenters] = useState([]);
@@ -48,9 +57,17 @@ function Dashboard({ authHeaders }) {
       setIsLoading(true);
       try {
         let url = `${API_BASE}/dashboard/stats`;
+        const params = new URLSearchParams();
         if (selectedCenters.length > 0) {
-          url += `?centerIds=${selectedCenters.join(',')}`;
+          params.append('centerIds', selectedCenters.join(','));
         }
+        if (countingStartDate) params.append('countingStartDate', countingStartDate);
+        if (countingEndDate) params.append('countingEndDate', countingEndDate);
+        
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+        
         const res = await fetch(url, { headers: headers() });
         if (res.ok) {
           const data = await res.json();
@@ -58,6 +75,7 @@ function Dashboard({ authHeaders }) {
           setTodayStats(data.todayStats);
           setWeeklySales(data.weeklySales);
           setWeeklyPurchases(data.weeklyPurchases);
+          setRecentCountingEntries(data.recentCountingEntries || []);
         }
       } catch (err) {
         console.error('Failed to fetch dashboard stats:', err);
@@ -67,7 +85,37 @@ function Dashboard({ authHeaders }) {
     };
 
     fetchStats();
-  }, [selectedCenters]);
+  }, [selectedCenters, countingStartDate, countingEndDate]);
+
+  useEffect(() => {
+    const fetchGraphData = async () => {
+      setIsGraphLoading(true);
+      try {
+        let url = `${API_BASE}/dashboard/counting-graph`;
+        const params = new URLSearchParams();
+        if (selectedCenters.length > 0) {
+          params.append('centerIds', selectedCenters.join(','));
+        }
+        if (countingStartDate) params.append('startDate', countingStartDate);
+        if (countingEndDate) params.append('endDate', countingEndDate);
+        params.append('groupBy', graphGroupBy);
+        params.append('metric', graphMetric);
+        
+        url += `?${params.toString()}`;
+        
+        const res = await fetch(url, { headers: headers() });
+        if (res.ok) {
+          const data = await res.json();
+          setGraphData(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch graph data:', err);
+      } finally {
+        setIsGraphLoading(false);
+      }
+    };
+    fetchGraphData();
+  }, [selectedCenters, countingStartDate, countingEndDate, graphGroupBy, graphMetric]);
 
   if (isLoading) {
     return (
@@ -231,6 +279,160 @@ function Dashboard({ authHeaders }) {
                 <tr>
                   <td colSpan="4" style={{ textAlign: 'center', color: '#64748b' }}>
                     No stock recorded in the last 7 days
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="dashboard-grid" style={{ marginTop: 20 }}>
+        <div className="card" style={{ gridColumn: '1 / -1' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+            <h3>Counting Trends</h3>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div>
+                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>Group By</label>
+                <select 
+                  value={graphGroupBy} 
+                  onChange={(e) => setGraphGroupBy(e.target.value)}
+                  style={{ padding: '6px 10px', margin: 0 }}
+                >
+                  <option value="date">Date-wise</option>
+                  <option value="month">Month-wise</option>
+                  <option value="year">Year-wise</option>
+                </select>
+              </div>
+              <div>
+                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>Metric</label>
+                <select 
+                  value={graphMetric} 
+                  onChange={(e) => setGraphMetric(e.target.value)}
+                  style={{ padding: '6px 10px', margin: 0 }}
+                >
+                  <option value="total">Total</option>
+                  <option value="average">Average</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>Data Columns</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#fff' }}>
+                  {[
+                    { id: 'totalSangat', label: 'Total Sangat', color: '#8884d8' },
+                    { id: 'totalLadies', label: 'Total Ladies', color: '#e83e8c' },
+                    { id: 'totalBalPathi', label: 'Total Bal Pathi', color: '#ffc107' },
+                    { id: 'totalBalSatsang', label: 'Total Bal Satsang', color: '#fd7e14' },
+                    { id: 'totalParking', label: 'Total Parking', color: '#82ca9d' },
+                    { id: 'mobileCount', label: 'Mobile Count', color: '#17a2b8' },
+                    { id: 'luggageCount', label: 'Luggage Count', color: '#6c757d' }
+                  ].map(col => (
+                    <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={graphSelectedColumns.includes(col.id)} 
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setGraphSelectedColumns(prev => [...prev, col.id]);
+                          } else {
+                            setGraphSelectedColumns(prev => prev.filter(c => c !== col.id));
+                          }
+                        }}
+                      />
+                      <span style={{ color: col.color, fontWeight: '500' }}>{col.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div style={{ height: 400, width: '100%', position: 'relative' }}>
+            {isGraphLoading ? (
+               <Loader overlay />
+            ) : graphData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={graphData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="groupLabel" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  {graphSelectedColumns.includes('totalSangat') && <Bar dataKey="totalSangat" name="Total Sangat" fill="#8884d8" />}
+                  {graphSelectedColumns.includes('totalLadies') && <Bar dataKey="totalLadies" name="Total Ladies" fill="#e83e8c" />}
+                  {graphSelectedColumns.includes('totalBalPathi') && <Bar dataKey="totalBalPathi" name="Total Bal Pathi" fill="#ffc107" />}
+                  {graphSelectedColumns.includes('totalBalSatsang') && <Bar dataKey="totalBalSatsang" name="Total Bal Satsang" fill="#fd7e14" />}
+                  {graphSelectedColumns.includes('totalParking') && <Bar dataKey="totalParking" name="Total Parking" fill="#82ca9d" />}
+                  {graphSelectedColumns.includes('mobileCount') && <Bar dataKey="mobileCount" name="Mobile Count" fill="#17a2b8" />}
+                  {graphSelectedColumns.includes('luggageCount') && <Bar dataKey="luggageCount" name="Luggage Count" fill="#6c757d" />}
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#64748b' }}>
+                No data available for graph
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="dashboard-grid" style={{ marginTop: 20 }}>
+        <div className="card" style={{ gridColumn: '1 / -1' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+            <h3>{(countingStartDate || countingEndDate) ? 'Filtered Counting Entries' : 'Recent Counting Entries (Last 7)'}</h3>
+            
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div>
+                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>From Date</label>
+                <input 
+                  type="date" 
+                  value={countingStartDate} 
+                  max={new Date().toISOString().split('T')[0]} 
+                  onChange={(e) => setCountingStartDate(e.target.value)} 
+                  style={{ padding: '6px 10px', margin: 0 }}
+                />
+              </div>
+              <div>
+                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>To Date</label>
+                <input 
+                  type="date" 
+                  value={countingEndDate} 
+                  max={new Date().toISOString().split('T')[0]} 
+                  onChange={(e) => setCountingEndDate(e.target.value)} 
+                  style={{ padding: '6px 10px', margin: 0 }}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <table className="data-table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Center</th>
+                <th>Total Sangat</th>
+                <th>Cars In/Out</th>
+                <th>Added By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentCountingEntries.length > 0 ? (
+                recentCountingEntries.map((entry) => (
+                  <tr key={entry.id}>
+                    <td>{new Date(entry.countingDate).toLocaleDateString()}</td>
+                    <td>{entry.centerName || '-'}</td>
+                    <td>{entry.totalSangat}</td>
+                    <td>{entry.carInCount || 0} / {entry.carOutCount || 0}</td>
+                    <td>{entry.addedBy || 'System'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>
+                    No recent counting entries found
                   </td>
                 </tr>
               )}

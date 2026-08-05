@@ -10,7 +10,8 @@ const AVAILABLE_MODULES = [
   { id: 'purchase', label: 'Stock Master' },
   { id: 'sales', label: 'Sales Master' },
   { id: 'report', label: 'Report Master' },
-  { id: 'users', label: 'User Master' }
+  { id: 'users', label: 'User Master' },
+  { id: 'counting', label: 'Counting Entry' }
 ];
 
 function UserMaster({ authHeaders, setToast }) {

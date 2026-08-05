@@ -14,6 +14,7 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import seedRoutes from './routes/seedRoutes.js';
+import countingRoutes from './routes/countingRoutes.js';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from './controllers/authController.js';
 
@@ -64,6 +65,7 @@ app.use('/api/sales', authMiddleware, salesRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+app.use('/api/counting', authMiddleware, countingRoutes);
 
 const superAdminMiddleware = (req, res, next) => {
   if (req.user && req.user.userType === 'super_admin') {

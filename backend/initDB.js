@@ -78,6 +78,30 @@ CREATE TABLE IF NOT EXISTS sales (
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (centerId) REFERENCES centers(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS counting_entries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  countingDate DATE NOT NULL DEFAULT (CURRENT_DATE()),
+  gentsCount INT DEFAULT 0,
+  ladiesCount INT DEFAULT 0,
+  childrenCount INT DEFAULT 0,
+  balSatsangBoysCount INT DEFAULT 0,
+  balSatsangGirlsCount INT DEFAULT 0,
+  balPathiBoysCount INT DEFAULT 0,
+  balPathiGirlsCount INT DEFAULT 0,
+  mobileCount INT DEFAULT 0,
+  luggageCount INT DEFAULT 0,
+  threeWheelerCount INT DEFAULT 0,
+  twoWheelerCount INT DEFAULT 0,
+  fourWheelerCount INT DEFAULT 0,
+  carInCount INT DEFAULT 0,
+  carOutCount INT DEFAULT 0,
+  userId INT,
+  centerId INT,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (centerId) REFERENCES centers(id) ON DELETE SET NULL
+);
 `;
 
 const initDB = async () => {

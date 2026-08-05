@@ -11,6 +11,7 @@ import ReportMaster from './components/ReportMaster';
 import UserMaster from './components/UserMaster';
 import SeedMaster from './components/SeedMaster';
 import Login from './components/Login';
+import CountingEntryForm from './components/CountingEntryForm';
 import { API_BASE, createAuthHeaders } from './utils/api';
 
 function UnauthorizedRedirect({ setToast }) {
@@ -35,6 +36,11 @@ function App() {
   const [userType, setUserType] = useState(localStorage.getItem('bav_user_type'));
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(authToken));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState({ book: false });
+
+  const toggleMenu = (menu) => {
+    setOpenMenus(prev => ({ ...prev, [menu]: !prev[menu] }));
+  };
 
   const navigateTo = (menu, path) => {
     setActiveMenu(menu);
@@ -118,6 +124,8 @@ function App() {
       setActiveMenu('report');
     } else if (location.pathname === '/users') {
       setActiveMenu('users');
+    } else if (location.pathname === '/counting') {
+      setActiveMenu('counting');
     } else {
       setActiveMenu('dashboard');
     }
@@ -164,39 +172,54 @@ function App() {
               Dashboard
             </button>
           )}
-          {userModules.includes('languages') && (
-            <button className={activeMenu === 'languages' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('languages', '/language')}>
-              Language Master
-            </button>
-          )}
-          {userModules.includes('categories') && (
-            <button className={activeMenu === 'categories' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('categories', '/category')}>
-              Category Master
-            </button>
-          )}
           {userModules.includes('centers') && (
             <button className={activeMenu === 'centers' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('centers', '/centers')}>
               Center Master
             </button>
           )}
-          {userModules.includes('items') && (
-            <button className={activeMenu === 'items' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('items', '/items')}>
-              Items Master
+
+          <div className="menu-group">
+            <button className="menu-group-header" onClick={() => toggleMenu('book')}>
+              Book {openMenus.book ? '▼' : '▶'}
             </button>
-          )}
-          {userModules.includes('purchase') && (
-            <button className={activeMenu === 'purchase' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('purchase', '/purchase')}>
-              Stock Master
-            </button>
-          )}
-          {userModules.includes('sales') && (
-            <button className={activeMenu === 'sales' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('sales', '/sales')}>
-              Sales Master
-            </button>
-          )}
-          {userModules.includes('report') && (
-            <button className={activeMenu === 'report' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('report', '/report')}>
-              Report Master
+            {openMenus.book && (
+              <div className="menu-group-content">
+                {userModules.includes('languages') && (
+                  <button className={activeMenu === 'languages' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('languages', '/language')}>
+                    Language Master
+                  </button>
+                )}
+                {userModules.includes('categories') && (
+                  <button className={activeMenu === 'categories' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('categories', '/category')}>
+                    Category Master
+                  </button>
+                )}
+                {userModules.includes('items') && (
+                  <button className={activeMenu === 'items' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('items', '/items')}>
+                    Items Master
+                  </button>
+                )}
+                {userModules.includes('purchase') && (
+                  <button className={activeMenu === 'purchase' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('purchase', '/purchase')}>
+                    Stock Master
+                  </button>
+                )}
+                {userModules.includes('sales') && (
+                  <button className={activeMenu === 'sales' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('sales', '/sales')}>
+                    Sales Master
+                  </button>
+                )}
+                {userModules.includes('report') && (
+                  <button className={activeMenu === 'report' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('report', '/report')}>
+                    Report Master
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {userModules.includes('counting') && (
+            <button className={activeMenu === 'counting' ? 'menu-btn active' : 'menu-btn'} onClick={() => navigateTo('counting', '/counting')}>
+              Counting Entry
             </button>
           )}
           {userModules.includes('users') && (
@@ -218,7 +241,7 @@ function App() {
             <button className="mobile-menu-btn icon-btn" onClick={() => setIsMobileMenuOpen(true)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
-            <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'centers' ? 'Center Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Stock Master' : activeMenu === 'sales' ? 'Sales Master' : activeMenu === 'users' ? 'User Master' : activeMenu === 'seed' ? 'Seed Scripts' : 'Report Master'}</h1>
+            <h1>{activeMenu === 'dashboard' ? 'Main Dashboard' : activeMenu === 'languages' ? 'Language Master' : activeMenu === 'categories' ? 'Category Master' : activeMenu === 'centers' ? 'Center Master' : activeMenu === 'items' ? 'Items Master' : activeMenu === 'purchase' ? 'Stock Master' : activeMenu === 'sales' ? 'Sales Master' : activeMenu === 'users' ? 'User Master' : activeMenu === 'seed' ? 'Seed Scripts' : activeMenu === 'counting' ? 'Counting Entry' : 'Report Master'}</h1>
           </div>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </header>
@@ -231,6 +254,7 @@ function App() {
           {userModules.includes('purchase') && <Route path="/purchase" element={<PurchaseMaster authHeaders={authHeaders} setToast={setToast} />} />}
           {userModules.includes('sales') && <Route path="/sales" element={<SalesMaster authHeaders={authHeaders} setToast={setToast} />} />}
           {userModules.includes('report') && <Route path="/report" element={<ReportMaster authHeaders={authHeaders} setToast={setToast} />} />}
+          {userModules.includes('counting') && <Route path="/counting" element={<CountingEntryForm authHeaders={authHeaders} setToast={setToast} />} />}
           {userModules.includes('users') && <Route path="/users" element={<UserMaster authHeaders={authHeaders} setToast={setToast} />} />}
           {userType === 'super_admin' && <Route path="/seed" element={<SeedMaster setToast={setToast} />} />}
           <Route path="/" element={<Dashboard authHeaders={authHeaders} />} />
