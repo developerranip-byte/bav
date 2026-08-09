@@ -429,24 +429,41 @@ function Dashboard({ authHeaders }) {
                 <th>Date</th>
                 <th>Center</th>
                 <th>Total Sangat</th>
-                <th>Cars In/Out</th>
+                <th>Total Bal Satsang</th>
+                <th>Total Bal Pathi</th>
+                <th>Mobile</th>
+                <th>Luggage</th>
+                <th>Total Parking</th>
+                <th>SSCD Car In</th>
+                <th>SSCD Car Out</th>
                 <th>Added By</th>
               </tr>
             </thead>
             <tbody>
               {recentCountingEntries.length > 0 ? (
-                recentCountingEntries.map((entry) => (
-                  <tr key={entry.id}>
-                    <td>{new Date(entry.countingDate).toLocaleDateString()}</td>
-                    <td>{entry.centerName || '-'}</td>
-                    <td>{entry.totalSangat}</td>
-                    <td>{entry.carInCount || 0} / {entry.carOutCount || 0}</td>
-                    <td>{entry.addedBy || 'System'}</td>
-                  </tr>
-                ))
+                recentCountingEntries.map((entry) => {
+                  const totalBalSatsang = (entry.balSatsangBoysCount || 0) + (entry.balSatsangGirlsCount || 0);
+                  const totalBalPathi = (entry.balPathiBoysCount || 0) + (entry.balPathiGirlsCount || 0);
+                  const totalParking = (entry.threeWheelerCount || 0) + (entry.twoWheelerCount || 0) + (entry.fourWheelerCount || 0);
+                  return (
+                    <tr key={entry.id}>
+                      <td>{new Date(entry.countingDate).toLocaleDateString()}</td>
+                      <td>{entry.centerName || '-'}</td>
+                      <td>{entry.totalSangat}</td>
+                      <td>{totalBalSatsang}</td>
+                      <td>{totalBalPathi}</td>
+                      <td>{entry.mobileCount || 0}</td>
+                      <td>{entry.luggageCount || 0}</td>
+                      <td>{totalParking}</td>
+                      <td>{entry.carInCount || 0}</td>
+                      <td>{entry.carOutCount || 0}</td>
+                      <td>{entry.addedBy || 'System'}</td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan="11" style={{ textAlign: 'center', color: '#64748b' }}>
                     No recent counting entries found
                   </td>
                 </tr>

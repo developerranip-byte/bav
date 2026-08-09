@@ -113,6 +113,18 @@ export const updateCountingEntry = async (req, res) => {
       }
     }
 
+    const values = [
+      date,
+      gentsCount || 0, ladiesCount || 0, childrenCount || 0,
+      balBoysCount || 0, balGirlsCount || 0,
+      balPathiBoysCount || 0, balPathiGirlsCount || 0,
+      mobileCount || 0, luggageCount || 0,
+      threeWheelerCount || 0, twoWheelerCount || 0, fourWheelerCount || 0,
+      carInCount || 0, carOutCount || 0,
+      finalCenter,
+      id
+    ];
+
     const affectedRows = await CountingEntry.update(values);
     if (affectedRows === 0) {
       return res.status(404).json({ message: 'Counting entry not found' });

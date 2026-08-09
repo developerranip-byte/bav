@@ -9,26 +9,32 @@ export const DashboardStats = {
   },
 
   getTodaySales: async (centerFilterS, qParams) => {
+    const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+    const currentDateExpr = isSqlite ? "DATE('now')" : "CURRENT_DATE()";
     const [[salesToday]] = await pool.query(`
       SELECT COALESCE(SUM(quantity), 0) AS soldQty, 
              COALESCE(SUM(salesPrice), 0) AS soldAmount 
       FROM sales 
-      WHERE DATE(salesDate) = CURRENT_DATE() ${centerFilterS}
+      WHERE DATE(salesDate) = ${currentDateExpr} ${centerFilterS}
     `, qParams);
     return salesToday;
   },
 
   getTodayPurchases: async (centerFilterP, qParams) => {
+    const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+    const currentDateExpr = isSqlite ? "DATE('now')" : "CURRENT_DATE()";
     const [[purchasesToday]] = await pool.query(`
       SELECT COALESCE(SUM(quantity), 0) AS purchasedQty, 
              COALESCE(SUM(quantity * amount), 0) AS purchasedAmount 
       FROM purchases 
-      WHERE DATE(purchaseDate) = CURRENT_DATE() ${centerFilterP}
+      WHERE DATE(purchaseDate) = ${currentDateExpr} ${centerFilterP}
     `, qParams);
     return purchasesToday;
   },
 
   getWeeklySales: async (centerFilterS, qParams) => {
+    const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+    const dateSubExpr = isSqlite ? "DATE('now', '-7 days')" : "DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)";
     const [weeklySales] = await pool.query(`
       SELECT s.id, s.quantity, s.salesDate, 
              i.name AS itemName, 
@@ -36,13 +42,15 @@ export const DashboardStats = {
       FROM sales s 
       LEFT JOIN items i ON s.itemId = i.id 
       LEFT JOIN users u ON s.userId = u.id 
-      WHERE s.salesDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) ${centerFilterS.replace(/centerId/g, 's.centerId')}
+      WHERE s.salesDate >= ${dateSubExpr} ${centerFilterS.replace(/centerId/g, 's.centerId')}
       ORDER BY s.salesDate DESC
     `, qParams);
     return weeklySales;
   },
 
   getWeeklyPurchases: async (centerFilterP, qParams) => {
+    const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+    const dateSubExpr = isSqlite ? "DATE('now', '-7 days')" : "DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)";
     const [weeklyPurchases] = await pool.query(`
       SELECT p.id, p.quantity, p.purchaseDate, 
              i.name AS itemName, 
@@ -50,7 +58,7 @@ export const DashboardStats = {
       FROM purchases p 
       LEFT JOIN items i ON p.itemId = i.id 
       LEFT JOIN users u ON p.userId = u.id 
-      WHERE p.purchaseDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) ${centerFilterP.replace(/centerId/g, 'p.centerId')}
+      WHERE p.purchaseDate >= ${dateSubExpr} ${centerFilterP.replace(/centerId/g, 'p.centerId')}
       ORDER BY p.purchaseDate DESC
     `, qParams);
     return weeklyPurchases;
@@ -58,7 +66,7 @@ export const DashboardStats = {
 
   getRecentCountingEntries: async (centerFilterS, countingDateFilter, countingLimit, countingQueryParams) => {
     const [recentCountingEntries] = await pool.query(`
-      SELECT ce.id, ce.countingDate, ce.carInCount, ce.carOutCount,
+      SELECT ce.*,
              (COALESCE(ce.gentsCount, 0) + COALESCE(ce.ladiesCount, 0) + COALESCE(ce.childrenCount, 0)) AS totalSangat,
              c.name AS centerName,
              u.username AS addedBy

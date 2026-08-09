@@ -93,16 +93,18 @@ export const getCountingGraphData = async (req, res) => {
   }
 
   // Determine group by clause
-  let groupSelect = "DATE_FORMAT(ce.countingDate, '%d-%b-%Y')";
+  const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+  
+  let groupSelect = isSqlite ? "strftime('%d-%m-%Y', ce.countingDate)" : "DATE_FORMAT(ce.countingDate, '%d-%b-%Y')";
   let groupAlias = 'groupLabel';
   let sqlGroupBy = 'DATE(ce.countingDate)';
 
   if (groupBy === 'month') {
-    groupSelect = "DATE_FORMAT(ce.countingDate, '%b %Y')";
-    sqlGroupBy = "DATE_FORMAT(ce.countingDate, '%Y-%m')";
+    groupSelect = isSqlite ? "strftime('%m-%Y', ce.countingDate)" : "DATE_FORMAT(ce.countingDate, '%b %Y')";
+    sqlGroupBy = isSqlite ? "strftime('%Y-%m', ce.countingDate)" : "DATE_FORMAT(ce.countingDate, '%Y-%m')";
   } else if (groupBy === 'year') {
-    groupSelect = "DATE_FORMAT(ce.countingDate, '%Y')";
-    sqlGroupBy = "DATE_FORMAT(ce.countingDate, '%Y')";
+    groupSelect = isSqlite ? "strftime('%Y', ce.countingDate)" : "DATE_FORMAT(ce.countingDate, '%Y')";
+    sqlGroupBy = isSqlite ? "strftime('%Y', ce.countingDate)" : "DATE_FORMAT(ce.countingDate, '%Y')";
   }
 
   // Determine metric
