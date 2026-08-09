@@ -161,7 +161,7 @@ export const getCountingGraphData = async (req, res) => {
              ROUND(${aggregateFunc}(COALESCE(ce.ladiesCount, 0)), 2) AS totalLadies,
              ROUND(${aggregateFunc}(COALESCE(ce.balPathiBoysCount, 0) + COALESCE(ce.balPathiGirlsCount, 0)), 2) AS totalBalPathi,
              ROUND(${aggregateFunc}(COALESCE(ce.balSatsangBoysCount, 0) + COALESCE(ce.balSatsangGirlsCount, 0)), 2) AS totalBalSatsang,
-             ROUND(${aggregateFunc}(COALESCE(ce.threeWheelerCount, 0) + COALESCE(ce.twoWheelerCount, 0) + COALESCE(ce.fourWheelerCount, 0) + COALESCE(ce.carInCount, 0) + COALESCE(ce.carOutCount, 0)), 2) AS totalParking,
+             ROUND(${aggregateFunc}(COALESCE(ce.threeWheelerCount, 0) + COALESCE(ce.twoWheelerCount, 0) + COALESCE(ce.fourWheelerCount, 0)), 2) AS totalParking,
              ROUND(${aggregateFunc}(COALESCE(ce.mobileCount, 0)), 2) AS mobileCount,
              ROUND(${aggregateFunc}(COALESCE(ce.luggageCount, 0)), 2) AS luggageCount
       FROM counting_entries ce

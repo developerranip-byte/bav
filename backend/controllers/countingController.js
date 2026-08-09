@@ -33,6 +33,12 @@ export const createCountingEntry = async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
+    const fallbackDate = () => {
+      const d = new Date();
+      const offset = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime() - offset).toISOString().split('T')[0];
+    };
+
     const finalDate = date || fallbackDate();
     const finalCenter = centerId || null;
 

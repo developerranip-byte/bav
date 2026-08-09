@@ -68,6 +68,7 @@ function App() {
         localStorage.setItem('bav_user_modules', JSON.stringify(data.modules || []));
         localStorage.setItem('bav_user_centers', JSON.stringify(data.centers || []));
         localStorage.setItem('bav_user_type', data.userType);
+        localStorage.setItem('bav_username', data.user);
         setToast({ type: 'success', message: 'Logged in successfully' });
         navigate('/');
       } else {

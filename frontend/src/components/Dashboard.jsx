@@ -13,9 +13,18 @@ function Dashboard({ authHeaders }) {
   const [countingStartDate, setCountingStartDate] = useState('');
   const [countingEndDate, setCountingEndDate] = useState('');
   const [graphData, setGraphData] = useState([]);
-  const [graphGroupBy, setGraphGroupBy] = useState('date');
-  const [graphMetric, setGraphMetric] = useState('total');
-  const [graphSelectedColumns, setGraphSelectedColumns] = useState(['totalSangat']);
+  const username = localStorage.getItem('bav_username') || 'default';
+
+  const [graphGroupBy, setGraphGroupBy] = useState(() => localStorage.getItem(`bav_graph_groupBy_${username}`) || 'date');
+  const [graphMetric, setGraphMetric] = useState(() => localStorage.getItem(`bav_graph_metric_${username}`) || 'total');
+  const [graphSelectedColumns, setGraphSelectedColumns] = useState(() => {
+    try {
+      const cols = localStorage.getItem(`bav_graph_columns_${username}`);
+      return cols ? JSON.parse(cols) : ['totalSangat'];
+    } catch {
+      return ['totalSangat'];
+    }
+  });
   const [isGraphLoading, setIsGraphLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [centers, setCenters] = useState([]);
@@ -86,6 +95,12 @@ function Dashboard({ authHeaders }) {
 
     fetchStats();
   }, [selectedCenters, countingStartDate, countingEndDate]);
+
+  useEffect(() => {
+    localStorage.setItem(`bav_graph_groupBy_${username}`, graphGroupBy);
+    localStorage.setItem(`bav_graph_metric_${username}`, graphMetric);
+    localStorage.setItem(`bav_graph_columns_${username}`, JSON.stringify(graphSelectedColumns));
+  }, [graphGroupBy, graphMetric, graphSelectedColumns, username]);
 
   useEffect(() => {
     const fetchGraphData = async () => {
