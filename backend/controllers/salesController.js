@@ -1,4 +1,4 @@
-import pool from '../db.js';
+import { Sale } from '../models/Sale.js';
 import ExcelJS from 'exceljs';
 export const getSales = async (req, res) => {
   
@@ -44,23 +44,7 @@ export const getSales = async (req, res) => {
     }
   }
 
-  const [countRows] = await pool.query(`SELECT COUNT(*) as total FROM sales s ${whereClause}`, params);
-  const total = countRows[0].total;
-
-  const [rows] = await pool.query(
-    `SELECT s.id, s.itemId, s.quantity, s.salesPrice, s.salesDate,
-            s.salesPrice AS totalAmount,
-            i.name AS itemName,
-            u.username AS addedBy, ctr.name AS centerName, s.centerId
-      FROM sales s
-      LEFT JOIN items i ON s.itemId = i.id
-      LEFT JOIN users u ON s.userId = u.id
-      LEFT JOIN centers ctr ON s.centerId = ctr.id
-      ${whereClause}
-      ${orderByClause}
-      LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
+  const { total, rows } = await Sale.getPaginatedSales({ whereClause, params, orderByClause, limit, offset });
   
   res.json({
     data: rows,
@@ -86,7 +70,7 @@ export const createSale = async (req, res) => {
   }
 
   // Check if item exists and is active
-  const [itemRows] = await pool.query('SELECT isActive FROM items WHERE id = ?', [itemId]);
+  const itemRows = await Sale.checkItemActive(itemId);
   if (itemRows.length === 0) {
     return res.status(400).json({ message: 'Item not found' });
   }
@@ -95,22 +79,13 @@ export const createSale = async (req, res) => {
   }
 
   // Get opening quantity from items table (treated globally)
-  const [openingRows] = await pool.query('SELECT openingQty FROM items WHERE id = ?', [itemId]);
-  const openingQty = Number(openingRows[0]?.openingQty || 0);
+  const openingQty = await Sale.getOpeningQty(itemId);
 
   // Get total purchased quantity from purchases table for this center
-  const [purchaseRows] = await pool.query(
-    'SELECT COALESCE(SUM(quantity), 0) AS totalPurchased FROM purchases WHERE itemId = ? AND centerId = ?',
-    [itemId, centerId]
-  );
-  const purchasedQty = Number(purchaseRows[0]?.totalPurchased || 0);
+  const purchasedQty = await Sale.getPurchasedQty(itemId, centerId);
 
   // Get total sold quantity from sales table for this center
-  const [salesRows] = await pool.query(
-    'SELECT COALESCE(SUM(quantity), 0) AS totalSold FROM sales WHERE itemId = ? AND centerId = ?',
-    [itemId, centerId]
-  );
-  const soldQty = Number(salesRows[0]?.totalSold || 0);
+  const soldQty = await Sale.getSoldQty(itemId, centerId);
 
   // Calculate available quantity. We allow global openingQty + center purchases - center sales
   // This is a simplification but allows existing global stock to be sold anywhere
@@ -121,12 +96,9 @@ export const createSale = async (req, res) => {
 
   const userId = req.user ? req.user.id : null;
 
-  const [result] = await pool.query(
-    'INSERT INTO sales (itemId, quantity, salesPrice, salesDate, userId, centerId) VALUES (?, ?, ?, ?, ?, ?)',
-    [itemId, quantity, salesPrice, salesDate, userId, centerId]
-  );
+  const insertId = await Sale.create({ itemId, quantity, salesPrice, salesDate, userId, centerId });
 
-  res.status(201).json({ id: result.insertId, itemId, quantity, salesPrice, salesDate, userId, centerId });
+  res.status(201).json({ id: insertId, itemId, quantity, salesPrice, salesDate, userId, centerId });
 };
 
 export const exportSales = async (req, res) => {
@@ -136,29 +108,12 @@ export const exportSales = async (req, res) => {
     const dropdownSheet = workbook.addWorksheet('DropdownData');
     dropdownSheet.state = 'hidden';
 
-    const [items] = await pool.query(`
-      SELECT i.id, i.name, 
-        (i.openingQty 
-         + COALESCE((SELECT SUM(quantity) FROM purchases WHERE itemId = i.id), 0) 
-         - COALESCE((SELECT SUM(quantity) FROM sales WHERE itemId = i.id), 0)) AS availableQty
-      FROM items i 
-      WHERE i.isActive = 1
-    `);
+    const items = await Sale.getAllItemsWithStock();
     
     dropdownSheet.getColumn('A').values = ['Items', ...items.map(i => i.name)];
     dropdownSheet.getColumn('B').values = ['Available', ...items.map(i => i.availableQty)];
 
-    const [rows] = await pool.query(
-      `SELECT s.id AS 'Sale ID', s.salesDate AS 'Date', s.itemId AS 'Item ID', 
-              i.name AS 'Item Name', s.quantity AS 'Quantity', s.salesPrice AS 'Price',
-              ctr.name AS 'Center Name',
-              u.username AS 'Added By'
-       FROM sales s
-       LEFT JOIN items i ON s.itemId = i.id
-       LEFT JOIN centers ctr ON s.centerId = ctr.id
-       LEFT JOIN users u ON s.userId = u.id
-       ORDER BY s.salesDate DESC, s.id DESC`
-    );
+    const rows = await Sale.getAllForExport();
 
     worksheet.columns = [
       { header: 'Sale ID', key: 'id', width: 10 },
@@ -250,7 +205,7 @@ export const importSales = async (req, res) => {
       return res.status(400).json({ message: 'No readable sheet found' });
     }
 
-    const [items] = await pool.query(`SELECT id, name FROM items`);
+    const items = await Sale.getAllItems();
     const itemMap = {};
     items.forEach(i => itemMap[i.name] = i.id);
 
@@ -306,41 +261,25 @@ export const importSales = async (req, res) => {
       saleId = Number(saleId);
 
       if (saleId && !isNaN(saleId) && saleId > 0) {
-        // Stock validation for UPDATE
-        const [openingRows] = await pool.query('SELECT openingQty FROM items WHERE id = ?', [itemId]);
-        const openingQty = Number(openingRows[0]?.openingQty || 0);
-
-        const [purchaseRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalPurchased FROM purchases WHERE itemId = ?', [itemId]);
-        const purchasedQty = Number(purchaseRows[0]?.totalPurchased || 0);
-
-        const [salesRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalSold FROM sales WHERE itemId = ?', [itemId]);
-        const soldQty = Number(salesRows[0]?.totalSold || 0);
+        const openingQty = await Sale.getOpeningQty(itemId);
+        const purchasedQty = await Sale.getPurchasedQty(itemId);
+        const soldQty = await Sale.getSoldQty(itemId);
 
         let available = openingQty + purchasedQty - soldQty;
 
-        const [oldSaleRows] = await pool.query('SELECT quantity FROM sales WHERE id = ?', [saleId]);
-        if (oldSaleRows.length > 0) {
-          available += Number(oldSaleRows[0].quantity);
-        }
+        const oldSaleQty = await Sale.getOldSaleQty(saleId);
+        available += oldSaleQty;
 
         if (quantity > available) {
           continue; // Skip row, exceeds available stock
         }
 
-        await pool.query(
-          'UPDATE sales SET itemId = ?, quantity = ?, salesPrice = ?, salesDate = ?, userId = ? WHERE id = ?',
-          [itemId, quantity, salesPrice, salesDate, userId, saleId]
-        );
+        await Sale.importUpdate(itemId, quantity, salesPrice, salesDate, userId, saleId);
       } else {
         // Stock validation for INSERT
-        const [openingRows] = await pool.query('SELECT openingQty FROM items WHERE id = ?', [itemId]);
-        const openingQty = Number(openingRows[0]?.openingQty || 0);
-
-        const [purchaseRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalPurchased FROM purchases WHERE itemId = ?', [itemId]);
-        const purchasedQty = Number(purchaseRows[0]?.totalPurchased || 0);
-
-        const [salesRows] = await pool.query('SELECT COALESCE(SUM(quantity), 0) AS totalSold FROM sales WHERE itemId = ?', [itemId]);
-        const soldQty = Number(salesRows[0]?.totalSold || 0);
+        const openingQty = await Sale.getOpeningQty(itemId);
+        const purchasedQty = await Sale.getPurchasedQty(itemId);
+        const soldQty = await Sale.getSoldQty(itemId);
 
         const available = openingQty + purchasedQty - soldQty;
         
@@ -348,10 +287,7 @@ export const importSales = async (req, res) => {
           continue; // Skip row, exceeds available stock
         }
         
-        await pool.query(
-          'INSERT INTO sales (itemId, quantity, salesPrice, salesDate, userId) VALUES (?, ?, ?, ?, ?)',
-          [itemId, quantity, salesPrice, salesDate, userId]
-        );
+        await Sale.importCreate(itemId, quantity, salesPrice, salesDate, userId);
       }
       importedCount++;
     }

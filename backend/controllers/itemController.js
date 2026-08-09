@@ -1,4 +1,4 @@
-import pool from '../db.js';
+import { Item } from '../models/Item.js';
 import ExcelJS from 'exceljs';
 
 export const getItems = async (req, res) => {
@@ -41,27 +41,7 @@ export const getItems = async (req, res) => {
     }
   }
 
-  const [countRows] = await pool.query(`SELECT COUNT(*) as total FROM items ${whereClause}`, params);
-  const total = countRows[0].total;
-
-  const [rows] = await pool.query(
-    `SELECT i.id, i.name, i.categoryId, i.languageId, i.isbn, i.openingQty, i.isActive,
-            c.name AS categoryName, l.name AS languageName, l.code AS languageCode,
-            COALESCE((
-              SELECT p.amount
-              FROM purchases p
-              WHERE p.itemId = i.id
-              ORDER BY p.purchaseDate DESC, p.id DESC
-              LIMIT 1
-            ), 0.00) AS lastPurchasePrice
-      FROM items i
-      LEFT JOIN categories c ON i.categoryId = c.id
-      LEFT JOIN languages l ON i.languageId = l.id
-      ${whereClause.replace(/items\./g, 'i.')}
-      ${orderByClause}
-      LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
+  const { total, rows } = await Item.getPaginatedItems({ whereClause, params, orderByClause, limit, offset });
   
   res.json({
     data: rows,
@@ -78,14 +58,7 @@ export const searchItems = async (req, res) => {
     return res.json([]);
   }
   const like = `%${query}%`;
-  const [rows] = await pool.query(
-    `SELECT id, name, isbn, categoryId, languageId, openingQty, isActive
-       FROM items
-      WHERE isActive = 1 AND (name LIKE ? OR isbn LIKE ?)
-      ORDER BY name
-      LIMIT 10`,
-    [like, like]
-  );
+  const rows = await Item.searchActive(like);
   res.json(rows);
 };
 
@@ -94,20 +67,14 @@ export const createItem = async (req, res) => {
   const { name, categoryId, languageId, isbn = null, openingQty = 0, isActive = true } = req.body;
   const itemIsbn = isbn && isbn.trim() !== '' ? isbn.trim() : null;
 
-  const [existing] = await pool.query(
-    'SELECT id FROM items WHERE name = ? AND (isbn = ? OR (isbn IS NULL AND ? IS NULL))',
-    [name, itemIsbn, itemIsbn]
-  );
+  const existing = await Item.findByNameAndIsbn(name, itemIsbn);
   if (existing.length > 0) {
     return res.status(400).json({ message: 'An item with this name and ISBN already exists' });
   }
 
-  const [result] = await pool.query(
-    'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, ?, ?)',
-    [name, categoryId || null, languageId || null, itemIsbn, openingQty, isActive ? 1 : 0]
-  );
+  const insertId = await Item.create({ name, categoryId: categoryId || null, languageId: languageId || null, isbn: itemIsbn, openingQty, isActive });
   res.status(201).json({
-    id: result.insertId,
+    id: insertId,
     name,
     categoryId,
     languageId,
@@ -123,24 +90,18 @@ export const updateItem = async (req, res) => {
   const { name, categoryId, languageId, isbn = null, openingQty = 0, isActive = true } = req.body;
   const itemIsbn = isbn && isbn.trim() !== '' ? isbn.trim() : null;
 
-  const [existing] = await pool.query(
-    'SELECT id FROM items WHERE name = ? AND (isbn = ? OR (isbn IS NULL AND ? IS NULL)) AND id != ?',
-    [name, itemIsbn, itemIsbn, id]
-  );
+  const existing = await Item.findByNameAndIsbn(name, itemIsbn, id);
   if (existing.length > 0) {
     return res.status(400).json({ message: 'An item with this name and ISBN already exists' });
   }
 
-  await pool.query(
-    'UPDATE items SET name = ?, categoryId = ?, languageId = ?, isbn = ?, openingQty = ?, isActive = ? WHERE id = ?',
-    [name, categoryId || null, languageId || null, itemIsbn, openingQty, isActive ? 1 : 0, id]
-  );
+  await Item.update(id, { name, categoryId: categoryId || null, languageId: languageId || null, isbn: itemIsbn, openingQty, isActive });
   res.json({ id: Number(id), name, categoryId, languageId, isbn: itemIsbn, openingQty, isActive });
 };
 
 export const deleteItem = async (req, res) => {
   const { id } = req.params;
-  await pool.query('DELETE FROM items WHERE id = ?', [id]);
+  await Item.delete(id);
   res.status(204).end();
 };
 
@@ -151,9 +112,7 @@ export const bulkDeleteItems = async (req, res) => {
       return res.status(400).json({ message: 'No item IDs provided' });
     }
     
-    // Create a dynamic query with ? placeholders based on the number of ids
-    const placeholders = ids.map(() => '?').join(',');
-    await pool.query(`DELETE FROM items WHERE id IN (${placeholders})`, ids);
+    await Item.bulkDelete(ids);
     
     res.status(204).end();
   } catch (err) {
@@ -169,20 +128,13 @@ export const exportItems = async (req, res) => {
     const dropdownSheet = workbook.addWorksheet('DropdownData');
     dropdownSheet.state = 'hidden';
 
-    const [categories] = await pool.query(`SELECT id, name FROM categories WHERE isActive = 1`);
-    const [languages] = await pool.query(`SELECT id, name FROM languages WHERE isActive = 1`);
+    const categories = await Item.getAllCategories(true);
+    const languages = await Item.getAllLanguages(true);
 
     dropdownSheet.getColumn('A').values = ['Categories', ...categories.map(c => c.name)];
     dropdownSheet.getColumn('B').values = ['Languages', ...languages.map(l => l.name)];
 
-    const [rows] = await pool.query(
-      `SELECT i.id AS 'Item ID', i.name AS 'Name', i.isbn AS 'ISBN', 
-              c.name AS 'Category', l.name AS 'Language'
-       FROM items i
-       LEFT JOIN categories c ON i.categoryId = c.id
-       LEFT JOIN languages l ON i.languageId = l.id
-       ORDER BY i.id DESC`
-    );
+    const rows = await Item.getAllForExport();
 
     worksheet.columns = [
       { header: 'Item ID', key: 'id', width: 10 },
@@ -248,8 +200,8 @@ export const importItems = async (req, res) => {
       return res.status(400).json({ message: 'No readable sheet found' });
     }
 
-    const [categories] = await pool.query(`SELECT id, name FROM categories`);
-    const [languages] = await pool.query(`SELECT id, name FROM languages`);
+    const categories = await Item.getAllCategories();
+    const languages = await Item.getAllLanguages();
     
     const categoryMap = {};
     categories.forEach(c => categoryMap[c.name] = c.id);
@@ -294,25 +246,13 @@ export const importItems = async (req, res) => {
       itemId = Number(itemId);
 
       if (itemId && !isNaN(itemId) && itemId > 0) {
-        await pool.query(
-          'UPDATE items SET name = ?, categoryId = ?, languageId = ?, isbn = ?, openingQty = 0 WHERE id = ?',
-          [name, categoryId, languageId, isbn, itemId]
-        );
+        await Item.importUpdateFull(itemId, name, categoryId, languageId, isbn);
       } else {
-        const [existing] = await pool.query(
-          'SELECT id FROM items WHERE name = ? AND (isbn = ? OR (isbn IS NULL AND ? IS NULL))',
-          [name, isbn, isbn]
-        );
+        const existing = await Item.findByNameAndIsbn(name, isbn);
         if (existing.length > 0) {
-          await pool.query(
-            'UPDATE items SET categoryId = ?, languageId = ? WHERE id = ?',
-            [categoryId, languageId, existing[0].id]
-          );
+          await Item.importUpdatePartial(existing[0].id, categoryId, languageId);
         } else {
-          await pool.query(
-            'INSERT INTO items (name, categoryId, languageId, isbn, openingQty, isActive) VALUES (?, ?, ?, ?, 0, 1)',
-            [name, categoryId, languageId, isbn]
-          );
+          await Item.importCreate(name, categoryId, languageId, isbn);
         }
       }
       importedCount++;

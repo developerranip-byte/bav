@@ -1,31 +1,28 @@
-import pool from '../db.js';
+import { Language } from '../models/Language.js';
 export const getLanguages = async (req, res) => {
   
-  const [rows] = await pool.query('SELECT * FROM languages ORDER BY id DESC');
+  const rows = await Language.findAll();
   res.json(rows);
 };
 
 export const createLanguage = async (req, res) => {
   
   const { name, code, isActive = true } = req.body;
-  const [result] = await pool.query(
-    'INSERT INTO languages (name, code, isActive) VALUES (?, ?, ?)',
-    [name, code, isActive ? 1 : 0]
-  );
-  res.status(201).json({ id: result.insertId, name, code, isActive });
+  const insertId = await Language.create({ name, code, isActive });
+  res.status(201).json({ id: insertId, name, code, isActive });
 };
 
 export const updateLanguage = async (req, res) => {
   
   const { id } = req.params;
   const { name, code, isActive = true } = req.body;
-  await pool.query('UPDATE languages SET name = ?, code = ?, isActive = ? WHERE id = ?', [name, code, isActive ? 1 : 0, id]);
+  await Language.update(id, { name, code, isActive });
   res.json({ id: Number(id), name, code, isActive });
 };
 
 export const deleteLanguage = async (req, res) => {
   
   const { id } = req.params;
-  await pool.query('DELETE FROM languages WHERE id = ?', [id]);
+  await Language.delete(id);
   res.status(204).end();
 };

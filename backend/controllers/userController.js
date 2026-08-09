@@ -1,4 +1,4 @@
-import pool from '../db.js';
+import { User } from '../models/User.js';
 import bcrypt from 'bcrypt';
 
 // Middleware to check if user is admin
@@ -11,8 +11,7 @@ export const requireAdmin = (req, res, next) => {
 };
 
 export const getUsers = async (req, res) => {
-  
-  const [rows] = await pool.query('SELECT id, username, userType, isActive, modules, centers, createdAt FROM users ORDER BY createdAt DESC');
+  const rows = await User.findAll();
   res.json(rows);
 };
 
@@ -28,11 +27,8 @@ export const createUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const modulesJson = JSON.stringify(modules);
     const centersJson = JSON.stringify(centers);
-    const [result] = await pool.query(
-      'INSERT INTO users (username, password, userType, modules, centers) VALUES (?, ?, ?, ?, ?)',
-      [username, hashedPassword, userType, modulesJson, centersJson]
-    );
-    res.status(201).json({ id: result.insertId, username, userType, modules, centers, isActive: 1 });
+    const insertId = await User.create({ username, hashedPassword, userType, modulesJson, centersJson });
+    res.status(201).json({ id: insertId, username, userType, modules, centers, isActive: 1 });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       res.status(400).json({ message: 'Username already exists' });
@@ -48,9 +44,8 @@ export const updateUser = async (req, res) => {
   const { password, userType, isActive, modules, centers } = req.body;
 
   try {
-    const [userRows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
-    if (userRows.length === 0) return res.status(404).json({ message: 'User not found' });
-    const user = userRows[0];
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Prevent non-super_admin from modifying super_admin
     if (user.userType === 'super_admin' && req.user.userType !== 'super_admin') {
@@ -81,10 +76,9 @@ export const updateUser = async (req, res) => {
       params.push(JSON.stringify(centers));
     }
 
-    query = query.slice(0, -2) + ' WHERE id = ?';
-    params.push(id);
-
-    await pool.query(query, params);
+    query = query.slice(0, -2); // remove last ', '
+    
+    await User.update(id, query, params);
     res.json({ message: 'User updated successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });

@@ -1,4 +1,4 @@
-import pool from '../db.js';
+import { Purchase } from '../models/Purchase.js';
 import ExcelJS from 'exceljs';
 
 export const getPurchases = async (req, res) => {
@@ -45,25 +45,7 @@ export const getPurchases = async (req, res) => {
     }
   }
 
-  const [countRows] = await pool.query(`SELECT COUNT(*) as total FROM purchases p ${whereClause}`, params);
-  const total = countRows[0].total;
-
-  const [rows] = await pool.query(
-    `SELECT p.id, p.purchaseDate, p.itemId, p.quantity, p.amount,
-            (p.quantity * p.amount) AS totalAmount,
-            i.name AS itemName, c.name AS categoryName, l.name AS languageName,
-            u.username AS addedBy, ctr.name AS centerName, p.centerId
-      FROM purchases p
-      LEFT JOIN items i ON p.itemId = i.id
-      LEFT JOIN categories c ON i.categoryId = c.id
-      LEFT JOIN languages l ON i.languageId = l.id
-      LEFT JOIN users u ON p.userId = u.id
-      LEFT JOIN centers ctr ON p.centerId = ctr.id
-      ${whereClause}
-      ${orderByClause}
-      LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
+  const { total, rows } = await Purchase.getPaginatedPurchases({ whereClause, params, orderByClause, limit, offset });
   
   res.json({
     data: rows,
@@ -81,18 +63,15 @@ export const createPurchase = async (req, res) => {
     return res.status(400).json({ message: 'Center selection is required' });
   }
 
-  const [itemRows] = await pool.query('SELECT isActive FROM items WHERE id = ?', [itemId]);
+  const itemRows = await Purchase.checkItemActive(itemId);
   if (itemRows.length === 0 || itemRows[0].isActive !== 1) {
     return res.status(400).json({ message: 'Purchase can only be recorded for an active item' });
   }
 
   const userId = req.user ? req.user.id : null;
 
-  const [result] = await pool.query(
-    'INSERT INTO purchases (itemId, quantity, amount, purchaseDate, userId, centerId) VALUES (?, ?, ?, ?, ?, ?)',
-    [itemId, quantity, amount, purchaseDate, userId, centerId]
-  );
-  res.status(201).json({ id: result.insertId, itemId, quantity, amount, purchaseDate, userId, centerId });
+  const insertId = await Purchase.create({ itemId, quantity, amount, purchaseDate, userId, centerId });
+  res.status(201).json({ id: insertId, itemId, quantity, amount, purchaseDate, userId, centerId });
 };
 
 export const exportPurchases = async (req, res) => {
@@ -102,21 +81,10 @@ export const exportPurchases = async (req, res) => {
     const dropdownSheet = workbook.addWorksheet('DropdownData');
     dropdownSheet.state = 'hidden';
 
-    const [items] = await pool.query(`SELECT id, name FROM items WHERE isActive = 1`);
+    const items = await Purchase.getAllItems(true);
     dropdownSheet.getColumn('A').values = ['Items', ...items.map(i => i.name)];
 
-    const [rows] = await pool.query(
-      `SELECT p.id AS 'Stock ID', p.purchaseDate AS 'Date', p.itemId AS 'Item ID', 
-              i.name AS 'Item Name', p.quantity AS 'Quantity', p.amount AS 'Price',
-              (p.quantity * p.amount) AS 'Total Amount',
-              ctr.name AS 'Center Name',
-              u.username AS 'Added By'
-       FROM purchases p
-       LEFT JOIN items i ON p.itemId = i.id
-       LEFT JOIN centers ctr ON p.centerId = ctr.id
-       LEFT JOIN users u ON p.userId = u.id
-       ORDER BY p.purchaseDate DESC, p.id DESC`
-    );
+    const rows = await Purchase.getAllForExport();
 
     worksheet.columns = [
       { header: 'Stock ID', key: 'id', width: 10 },
@@ -208,7 +176,7 @@ export const importPurchases = async (req, res) => {
       return res.status(400).json({ message: 'No readable sheet found' });
     }
 
-    const [items] = await pool.query(`SELECT id, name FROM items`);
+    const items = await Purchase.getAllItems();
     const itemMap = {};
     items.forEach(i => itemMap[i.name] = i.id);
 
@@ -268,15 +236,9 @@ export const importPurchases = async (req, res) => {
       stockId = Number(stockId);
 
       if (stockId && !isNaN(stockId) && stockId > 0) {
-        await pool.query(
-          'UPDATE purchases SET itemId = ?, quantity = ?, amount = ?, purchaseDate = ?, userId = ? WHERE id = ?',
-          [itemId, quantity, amount, purchaseDate, userId, stockId]
-        );
+        await Purchase.importUpdate(itemId, quantity, amount, purchaseDate, userId, stockId);
       } else {
-        await pool.query(
-          'INSERT INTO purchases (itemId, quantity, amount, purchaseDate, userId) VALUES (?, ?, ?, ?, ?)',
-          [itemId, quantity, amount, purchaseDate, userId]
-        );
+        await Purchase.importCreate(itemId, quantity, amount, purchaseDate, userId);
       }
       importedCount++;
     }

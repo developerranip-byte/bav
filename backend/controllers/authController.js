@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import pool from '../db.js';
+import { User } from '../models/User.js';
 import { ROLE_MODULES } from '../config/roles.js';
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_bav_key';
@@ -9,12 +9,11 @@ export const login = async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    const [rows] = await pool.query('SELECT * FROM users WHERE username = ? AND isActive = 1', [username]);
-    if (rows.length === 0) {
+    const user = await User.findByUsernameActive(username);
+    if (!user) {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
-    const user = rows[0];
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid username or password' });
