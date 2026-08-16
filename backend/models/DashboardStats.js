@@ -89,7 +89,9 @@ export const DashboardStats = {
              ROUND(${aggregateFunc}(COALESCE(ce.balSatsangBoysCount, 0) + COALESCE(ce.balSatsangGirlsCount, 0)), 2) AS totalBalSatsang,
              ROUND(${aggregateFunc}(COALESCE(ce.threeWheelerCount, 0) + COALESCE(ce.twoWheelerCount, 0) + COALESCE(ce.fourWheelerCount, 0)), 2) AS totalParking,
              ROUND(${aggregateFunc}(COALESCE(ce.mobileCount, 0)), 2) AS mobileCount,
-             ROUND(${aggregateFunc}(COALESCE(ce.luggageCount, 0)), 2) AS luggageCount
+             ROUND(${aggregateFunc}(COALESCE(ce.luggageCount, 0)), 2) AS luggageCount,
+             ROUND(${aggregateFunc}(COALESCE(ce.carInCount, 0)), 2) AS sscdCarIn,
+             ROUND(${aggregateFunc}(COALESCE(ce.carOutCount, 0)), 2) AS sscdCarOut
       FROM counting_entries ce
       WHERE ce.countingDate IS NOT NULL ${centerFilter} ${dateFilter}
       GROUP BY ${sqlGroupBy}

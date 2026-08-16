@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { API_BASE, createAuthHeaders } from '../utils/api';
 import { CURRENCY_SYMBOL } from '../utils/config';
 import Loader from './Loader';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function Dashboard({ authHeaders }) {
   const [stats, setStats] = useState({ languages: 0, categories: 0, items: 0 });
@@ -17,6 +17,7 @@ function Dashboard({ authHeaders }) {
 
   const [graphGroupBy, setGraphGroupBy] = useState(() => localStorage.getItem(`bav_graph_groupBy_${username}`) || 'date');
   const [graphMetric, setGraphMetric] = useState(() => localStorage.getItem(`bav_graph_metric_${username}`) || 'total');
+  const [graphChartType, setGraphChartType] = useState(() => localStorage.getItem(`bav_graph_chartType_${username}`) || 'bar');
   const [graphSelectedColumns, setGraphSelectedColumns] = useState(() => {
     try {
       const cols = localStorage.getItem(`bav_graph_columns_${username}`);
@@ -99,8 +100,9 @@ function Dashboard({ authHeaders }) {
   useEffect(() => {
     localStorage.setItem(`bav_graph_groupBy_${username}`, graphGroupBy);
     localStorage.setItem(`bav_graph_metric_${username}`, graphMetric);
+    localStorage.setItem(`bav_graph_chartType_${username}`, graphChartType);
     localStorage.setItem(`bav_graph_columns_${username}`, JSON.stringify(graphSelectedColumns));
-  }, [graphGroupBy, graphMetric, graphSelectedColumns, username]);
+  }, [graphGroupBy, graphMetric, graphChartType, graphSelectedColumns, username]);
 
   useEffect(() => {
     const fetchGraphData = async () => {
@@ -330,6 +332,18 @@ function Dashboard({ authHeaders }) {
                   <option value="average">Average</option>
                 </select>
               </div>
+              <div>
+                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>Chart Type</label>
+                <select 
+                  value={graphChartType} 
+                  onChange={(e) => setGraphChartType(e.target.value)}
+                  style={{ padding: '6px 10px', margin: 0 }}
+                >
+                  <option value="bar">Bar Chart</option>
+                  <option value="line">Line Chart</option>
+                  <option value="area">Area Chart</option>
+                </select>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>Data Columns</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#fff' }}>
@@ -340,7 +354,9 @@ function Dashboard({ authHeaders }) {
                     { id: 'totalBalSatsang', label: 'Total Bal Satsang', color: '#fd7e14' },
                     { id: 'totalParking', label: 'Total Parking', color: '#82ca9d' },
                     { id: 'mobileCount', label: 'Mobile Count', color: '#17a2b8' },
-                    { id: 'luggageCount', label: 'Luggage Count', color: '#6c757d' }
+                    { id: 'luggageCount', label: 'Luggage Count', color: '#6c757d' },
+                    { id: 'sscdCarIn', label: 'SSCD In', color: '#3b82f6' },
+                    { id: 'sscdCarOut', label: 'SSCD Out', color: '#ef4444' }
                   ].map(col => (
                     <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
                       <input 
@@ -367,23 +383,58 @@ function Dashboard({ authHeaders }) {
                <Loader overlay />
             ) : graphData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={graphData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="groupLabel" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  {graphSelectedColumns.includes('totalSangat') && <Bar dataKey="totalSangat" name="Total Sangat" fill="#8884d8" />}
-                  {graphSelectedColumns.includes('totalLadies') && <Bar dataKey="totalLadies" name="Total Ladies" fill="#e83e8c" />}
-                  {graphSelectedColumns.includes('totalBalPathi') && <Bar dataKey="totalBalPathi" name="Total Bal Pathi" fill="#ffc107" />}
-                  {graphSelectedColumns.includes('totalBalSatsang') && <Bar dataKey="totalBalSatsang" name="Total Bal Satsang" fill="#fd7e14" />}
-                  {graphSelectedColumns.includes('totalParking') && <Bar dataKey="totalParking" name="Total Parking" fill="#82ca9d" />}
-                  {graphSelectedColumns.includes('mobileCount') && <Bar dataKey="mobileCount" name="Mobile Count" fill="#17a2b8" />}
-                  {graphSelectedColumns.includes('luggageCount') && <Bar dataKey="luggageCount" name="Luggage Count" fill="#6c757d" />}
-                </BarChart>
+                {graphChartType === 'line' ? (
+                  <LineChart data={graphData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="groupLabel" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    {graphSelectedColumns.includes('totalSangat') && <Line type="monotone" dataKey="totalSangat" name="Total Sangat" stroke="#8884d8" strokeWidth={2} />}
+                    {graphSelectedColumns.includes('totalLadies') && <Line type="monotone" dataKey="totalLadies" name="Total Ladies" stroke="#e83e8c" strokeWidth={2} />}
+                    {graphSelectedColumns.includes('totalBalPathi') && <Line type="monotone" dataKey="totalBalPathi" name="Total Bal Pathi" stroke="#ffc107" strokeWidth={2} />}
+                    {graphSelectedColumns.includes('totalBalSatsang') && <Line type="monotone" dataKey="totalBalSatsang" name="Total Bal Satsang" stroke="#fd7e14" strokeWidth={2} />}
+                    {graphSelectedColumns.includes('totalParking') && <Line type="monotone" dataKey="totalParking" name="Total Parking" stroke="#82ca9d" strokeWidth={2} />}
+                    {graphSelectedColumns.includes('mobileCount') && <Line type="monotone" dataKey="mobileCount" name="Mobile Count" stroke="#17a2b8" strokeWidth={2} />}
+                    {graphSelectedColumns.includes('luggageCount') && <Line type="monotone" dataKey="luggageCount" name="Luggage Count" stroke="#6c757d" strokeWidth={2} />}
+                    {graphSelectedColumns.includes('sscdCarIn') && <Line type="monotone" dataKey="sscdCarIn" name="SSCD In" stroke="#3b82f6" strokeWidth={2} />}
+                    {graphSelectedColumns.includes('sscdCarOut') && <Line type="monotone" dataKey="sscdCarOut" name="SSCD Out" stroke="#ef4444" strokeWidth={2} />}
+                  </LineChart>
+                ) : graphChartType === 'area' ? (
+                  <AreaChart data={graphData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="groupLabel" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    {graphSelectedColumns.includes('totalSangat') && <Area type="monotone" dataKey="totalSangat" name="Total Sangat" fill="#8884d8" stroke="#8884d8" fillOpacity={0.3} />}
+                    {graphSelectedColumns.includes('totalLadies') && <Area type="monotone" dataKey="totalLadies" name="Total Ladies" fill="#e83e8c" stroke="#e83e8c" fillOpacity={0.3} />}
+                    {graphSelectedColumns.includes('totalBalPathi') && <Area type="monotone" dataKey="totalBalPathi" name="Total Bal Pathi" fill="#ffc107" stroke="#ffc107" fillOpacity={0.3} />}
+                    {graphSelectedColumns.includes('totalBalSatsang') && <Area type="monotone" dataKey="totalBalSatsang" name="Total Bal Satsang" fill="#fd7e14" stroke="#fd7e14" fillOpacity={0.3} />}
+                    {graphSelectedColumns.includes('totalParking') && <Area type="monotone" dataKey="totalParking" name="Total Parking" fill="#82ca9d" stroke="#82ca9d" fillOpacity={0.3} />}
+                    {graphSelectedColumns.includes('mobileCount') && <Area type="monotone" dataKey="mobileCount" name="Mobile Count" fill="#17a2b8" stroke="#17a2b8" fillOpacity={0.3} />}
+                    {graphSelectedColumns.includes('luggageCount') && <Area type="monotone" dataKey="luggageCount" name="Luggage Count" fill="#6c757d" stroke="#6c757d" fillOpacity={0.3} />}
+                    {graphSelectedColumns.includes('sscdCarIn') && <Area type="monotone" dataKey="sscdCarIn" name="SSCD In" fill="#3b82f6" stroke="#3b82f6" fillOpacity={0.3} />}
+                    {graphSelectedColumns.includes('sscdCarOut') && <Area type="monotone" dataKey="sscdCarOut" name="SSCD Out" fill="#ef4444" stroke="#ef4444" fillOpacity={0.3} />}
+                  </AreaChart>
+                ) : (
+                  <BarChart data={graphData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="groupLabel" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    {graphSelectedColumns.includes('totalSangat') && <Bar dataKey="totalSangat" name="Total Sangat" fill="#8884d8" />}
+                    {graphSelectedColumns.includes('totalLadies') && <Bar dataKey="totalLadies" name="Total Ladies" fill="#e83e8c" />}
+                    {graphSelectedColumns.includes('totalBalPathi') && <Bar dataKey="totalBalPathi" name="Total Bal Pathi" fill="#ffc107" />}
+                    {graphSelectedColumns.includes('totalBalSatsang') && <Bar dataKey="totalBalSatsang" name="Total Bal Satsang" fill="#fd7e14" />}
+                    {graphSelectedColumns.includes('totalParking') && <Bar dataKey="totalParking" name="Total Parking" fill="#82ca9d" />}
+                    {graphSelectedColumns.includes('mobileCount') && <Bar dataKey="mobileCount" name="Mobile Count" fill="#17a2b8" />}
+                    {graphSelectedColumns.includes('luggageCount') && <Bar dataKey="luggageCount" name="Luggage Count" fill="#6c757d" />}
+                    {graphSelectedColumns.includes('sscdCarIn') && <Bar dataKey="sscdCarIn" name="SSCD In" fill="#3b82f6" />}
+                    {graphSelectedColumns.includes('sscdCarOut') && <Bar dataKey="sscdCarOut" name="SSCD Out" fill="#ef4444" />}
+                  </BarChart>
+                )}
               </ResponsiveContainer>
             ) : (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#64748b' }}>

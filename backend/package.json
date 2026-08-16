@@ -21,6 +21,8 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
     "mysql2": "^3.5.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
