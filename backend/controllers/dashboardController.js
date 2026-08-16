@@ -93,7 +93,7 @@ export const getCountingGraphData = async (req, res) => {
   }
 
   // Determine group by clause
-  const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+  const isSqlite = (process.env.DB_TYPE || 'mysql') === 'sqlite';
   
   let groupSelect = isSqlite ? "strftime('%d-%m-%Y', ce.countingDate)" : "DATE_FORMAT(ce.countingDate, '%d-%b-%Y')";
   let groupAlias = 'groupLabel';

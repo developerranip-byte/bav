@@ -9,7 +9,7 @@ export const DashboardStats = {
   },
 
   getTodaySales: async (centerFilterS, qParams) => {
-    const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+    const isSqlite = (process.env.DB_TYPE || 'mysql') === 'sqlite';
     const currentDateExpr = isSqlite ? "DATE('now')" : "CURRENT_DATE()";
     const [[salesToday]] = await pool.query(`
       SELECT COALESCE(SUM(quantity), 0) AS soldQty, 
@@ -21,7 +21,7 @@ export const DashboardStats = {
   },
 
   getTodayPurchases: async (centerFilterP, qParams) => {
-    const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+    const isSqlite = (process.env.DB_TYPE || 'mysql') === 'sqlite';
     const currentDateExpr = isSqlite ? "DATE('now')" : "CURRENT_DATE()";
     const [[purchasesToday]] = await pool.query(`
       SELECT COALESCE(SUM(quantity), 0) AS purchasedQty, 
@@ -33,7 +33,7 @@ export const DashboardStats = {
   },
 
   getWeeklySales: async (centerFilterS, qParams) => {
-    const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+    const isSqlite = (process.env.DB_TYPE || 'mysql') === 'sqlite';
     const dateSubExpr = isSqlite ? "DATE('now', '-7 days')" : "DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)";
     const [weeklySales] = await pool.query(`
       SELECT s.id, s.quantity, s.salesDate, 
@@ -49,7 +49,7 @@ export const DashboardStats = {
   },
 
   getWeeklyPurchases: async (centerFilterP, qParams) => {
-    const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+    const isSqlite = (process.env.DB_TYPE || 'mysql') === 'sqlite';
     const dateSubExpr = isSqlite ? "DATE('now', '-7 days')" : "DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)";
     const [weeklyPurchases] = await pool.query(`
       SELECT p.id, p.quantity, p.purchaseDate, 

@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise';
 // import { open } from 'sqlite';
 import 'dotenv/config';
 
-const DB_TYPE = process.env.DB_TYPE || 'sqlite';
+const DB_TYPE = process.env.DB_TYPE || 'mysql';
 const dbName = process.env.DB_NAME || 'bav_db';
 const useSSL = process.env.DB_HOST && process.env.DB_HOST !== 'localhost';
 

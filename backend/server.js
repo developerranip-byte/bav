@@ -29,7 +29,7 @@ app.locals.pool = pool;
 
 app.get('/api/init-db', async (req, res) => {
   try {
-    const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
+    const isSqlite = (process.env.DB_TYPE || 'mysql') === 'sqlite';
     if (isSqlite) {
       const { default: initSqlite } = await import('./scripts/initSqlite.js');
       await initSqlite();
