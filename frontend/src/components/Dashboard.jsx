@@ -134,16 +134,9 @@ function Dashboard({ authHeaders }) {
     fetchGraphData();
   }, [selectedCenters, countingStartDate, countingEndDate, graphGroupBy, graphMetric]);
 
-  if (isLoading) {
-    return (
-      <div style={{ minHeight: '60vh', position: 'relative' }}>
-        <Loader overlay />
-      </div>
-    );
-  }
-
   return (
-    <>
+    <div style={{ position: 'relative', minHeight: '100%' }}>
+      {isLoading && <Loader overlay />}
       <section className="page-card" style={{ marginBottom: 20 }}>
         <div className="page-header" style={{ marginBottom: 0 }}>
           <div>
@@ -310,6 +303,26 @@ function Dashboard({ authHeaders }) {
             <h3>Counting Trends</h3>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div>
+                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>From Date</label>
+                <input 
+                  type="date" 
+                  value={countingStartDate} 
+                  max={new Date().toISOString().split('T')[0]} 
+                  onChange={(e) => setCountingStartDate(e.target.value)} 
+                  style={{ padding: '6px 10px', margin: 0 }}
+                />
+              </div>
+              <div>
+                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>To Date</label>
+                <input 
+                  type="date" 
+                  value={countingEndDate} 
+                  max={new Date().toISOString().split('T')[0]} 
+                  onChange={(e) => setCountingEndDate(e.target.value)} 
+                  style={{ padding: '6px 10px', margin: 0 }}
+                />
+              </div>
+              <div>
                 <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>Group By</label>
                 <select 
                   value={graphGroupBy} 
@@ -349,7 +362,6 @@ function Dashboard({ authHeaders }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#fff' }}>
                   {[
                     { id: 'totalSangat', label: 'Total Sangat', color: '#8884d8' },
-                    { id: 'totalLadies', label: 'Total Ladies', color: '#e83e8c' },
                     { id: 'totalBalPathi', label: 'Total Bal Pathi', color: '#ffc107' },
                     { id: 'totalBalSatsang', label: 'Total Bal Satsang', color: '#fd7e14' },
                     { id: 'totalParking', label: 'Total Parking', color: '#82ca9d' },
@@ -391,7 +403,6 @@ function Dashboard({ authHeaders }) {
                     <Tooltip />
                     <Legend />
                     {graphSelectedColumns.includes('totalSangat') && <Line type="monotone" dataKey="totalSangat" name="Total Sangat" stroke="#8884d8" strokeWidth={2} />}
-                    {graphSelectedColumns.includes('totalLadies') && <Line type="monotone" dataKey="totalLadies" name="Total Ladies" stroke="#e83e8c" strokeWidth={2} />}
                     {graphSelectedColumns.includes('totalBalPathi') && <Line type="monotone" dataKey="totalBalPathi" name="Total Bal Pathi" stroke="#ffc107" strokeWidth={2} />}
                     {graphSelectedColumns.includes('totalBalSatsang') && <Line type="monotone" dataKey="totalBalSatsang" name="Total Bal Satsang" stroke="#fd7e14" strokeWidth={2} />}
                     {graphSelectedColumns.includes('totalParking') && <Line type="monotone" dataKey="totalParking" name="Total Parking" stroke="#82ca9d" strokeWidth={2} />}
@@ -408,7 +419,6 @@ function Dashboard({ authHeaders }) {
                     <Tooltip />
                     <Legend />
                     {graphSelectedColumns.includes('totalSangat') && <Area type="monotone" dataKey="totalSangat" name="Total Sangat" fill="#8884d8" stroke="#8884d8" fillOpacity={0.3} />}
-                    {graphSelectedColumns.includes('totalLadies') && <Area type="monotone" dataKey="totalLadies" name="Total Ladies" fill="#e83e8c" stroke="#e83e8c" fillOpacity={0.3} />}
                     {graphSelectedColumns.includes('totalBalPathi') && <Area type="monotone" dataKey="totalBalPathi" name="Total Bal Pathi" fill="#ffc107" stroke="#ffc107" fillOpacity={0.3} />}
                     {graphSelectedColumns.includes('totalBalSatsang') && <Area type="monotone" dataKey="totalBalSatsang" name="Total Bal Satsang" fill="#fd7e14" stroke="#fd7e14" fillOpacity={0.3} />}
                     {graphSelectedColumns.includes('totalParking') && <Area type="monotone" dataKey="totalParking" name="Total Parking" fill="#82ca9d" stroke="#82ca9d" fillOpacity={0.3} />}
@@ -425,7 +435,6 @@ function Dashboard({ authHeaders }) {
                     <Tooltip />
                     <Legend />
                     {graphSelectedColumns.includes('totalSangat') && <Bar dataKey="totalSangat" name="Total Sangat" fill="#8884d8" />}
-                    {graphSelectedColumns.includes('totalLadies') && <Bar dataKey="totalLadies" name="Total Ladies" fill="#e83e8c" />}
                     {graphSelectedColumns.includes('totalBalPathi') && <Bar dataKey="totalBalPathi" name="Total Bal Pathi" fill="#ffc107" />}
                     {graphSelectedColumns.includes('totalBalSatsang') && <Bar dataKey="totalBalSatsang" name="Total Bal Satsang" fill="#fd7e14" />}
                     {graphSelectedColumns.includes('totalParking') && <Bar dataKey="totalParking" name="Total Parking" fill="#82ca9d" />}
@@ -449,29 +458,6 @@ function Dashboard({ authHeaders }) {
         <div className="card" style={{ gridColumn: '1 / -1' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
             <h3>{(countingStartDate || countingEndDate) ? 'Filtered Counting Entries' : 'Recent Counting Entries (Last 7)'}</h3>
-            
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div>
-                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>From Date</label>
-                <input 
-                  type="date" 
-                  value={countingStartDate} 
-                  max={new Date().toISOString().split('T')[0]} 
-                  onChange={(e) => setCountingStartDate(e.target.value)} 
-                  style={{ padding: '6px 10px', margin: 0 }}
-                />
-              </div>
-              <div>
-                <label className="field-label" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>To Date</label>
-                <input 
-                  type="date" 
-                  value={countingEndDate} 
-                  max={new Date().toISOString().split('T')[0]} 
-                  onChange={(e) => setCountingEndDate(e.target.value)} 
-                  style={{ padding: '6px 10px', margin: 0 }}
-                />
-              </div>
-            </div>
           </div>
           
           <table className="data-table" style={{ width: '100%' }}>
@@ -523,7 +509,7 @@ function Dashboard({ authHeaders }) {
           </table>
         </div>
       </section>
-    </>
+    </div>
   );
 }
 

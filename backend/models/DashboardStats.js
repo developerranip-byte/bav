@@ -84,7 +84,6 @@ export const DashboardStats = {
     const query = `
       SELECT ${groupSelect} AS groupLabel,
              ROUND(${aggregateFunc}(COALESCE(ce.gentsCount, 0) + COALESCE(ce.ladiesCount, 0) + COALESCE(ce.childrenCount, 0)), 2) AS totalSangat,
-             ROUND(${aggregateFunc}(COALESCE(ce.ladiesCount, 0)), 2) AS totalLadies,
              ROUND(${aggregateFunc}(COALESCE(ce.balPathiBoysCount, 0) + COALESCE(ce.balPathiGirlsCount, 0)), 2) AS totalBalPathi,
              ROUND(${aggregateFunc}(COALESCE(ce.balSatsangBoysCount, 0) + COALESCE(ce.balSatsangGirlsCount, 0)), 2) AS totalBalSatsang,
              ROUND(${aggregateFunc}(COALESCE(ce.threeWheelerCount, 0) + COALESCE(ce.twoWheelerCount, 0) + COALESCE(ce.fourWheelerCount, 0)), 2) AS totalParking,
