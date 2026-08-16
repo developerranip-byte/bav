@@ -1,5 +1,5 @@
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+// import sqlite3 from 'sqlite3';
+// import { open } from 'sqlite';
 import 'dotenv/config';
 
 const schema = `
@@ -112,6 +112,9 @@ const initSqlite = async () => {
   console.log("Connecting to SQLite database...");
   const sqlitePath = process.env.SQLITE_DB_PATH || './database.sqlite';
   
+  const { default: sqlite3 } = await import('sqlite3');
+  const { open } = await import('sqlite');
+
   const sqliteDb = await open({
     filename: sqlitePath,
     driver: sqlite3.Database

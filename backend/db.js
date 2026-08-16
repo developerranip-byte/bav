@@ -1,6 +1,6 @@
 import mysql from 'mysql2/promise';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+// import sqlite3 from 'sqlite3';
+// import { open } from 'sqlite';
 import 'dotenv/config';
 
 const DB_TYPE = process.env.DB_TYPE || 'sqlite';
@@ -26,6 +26,8 @@ if (DB_TYPE === 'mysql') {
 } else if (DB_TYPE === 'sqlite') {
   const sqlitePath = process.env.SQLITE_DB_PATH || './database.sqlite';
   try {
+    const { default: sqlite3 } = await import('sqlite3');
+    const { open } = await import('sqlite');
     sqliteDb = await open({
       filename: sqlitePath,
       driver: sqlite3.Database

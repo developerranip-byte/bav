@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import pool from './db.js';
 import initDB from './initDB.js';
-import initSqlite from './scripts/initSqlite.js';
+// import initSqlite from './scripts/initSqlite.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import centerRoutes from './routes/centerRoutes.js';
 import languageRoutes from './routes/languageRoutes.js';
@@ -31,6 +31,7 @@ app.get('/api/init-db', async (req, res) => {
   try {
     const isSqlite = (process.env.DB_TYPE || 'sqlite') === 'sqlite';
     if (isSqlite) {
+      const { default: initSqlite } = await import('./scripts/initSqlite.js');
       await initSqlite();
     } else {
       await initDB();
